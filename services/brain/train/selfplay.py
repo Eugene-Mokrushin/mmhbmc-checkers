@@ -5,7 +5,7 @@ import numpy as np
 from connectome.controls import CONTROLS
 from flycore.board import apply_move
 from game.arena import OPPONENTS, Game, finish, step
-from game.fly import Fly
+from game.fly import WINDOW, Fly
 from game.players import Player, material
 from progress import Progress
 from train.controls import setup
@@ -41,7 +41,7 @@ def block(fly: Fly, plastic: Plasticity, opponent: Player, n: int, shaped: bool)
             reward = np.array([outcome(games[i], fly, before[i], shaped) for i in mine])
             plastic.update(traces[mine], reward)
     wins = sum(g.winner is fly for g in games) / n
-    return {"train_win": wins, "kc_active": float(np.mean(kc_active)), "mbon_hz": float(np.mean(mbon_spikes)) * 10}
+    return {"train_win": wins, "kc_active": float(np.mean(kc_active)), "mbon_hz": float(np.mean(mbon_spikes)) / (WINDOW * fly.sim.p.dt)}
 
 
 def outcome(game: Game, fly: Fly, before: float, shaped: bool) -> float:

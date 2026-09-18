@@ -5,6 +5,7 @@ import numpy as np
 import scipy.sparse as sp
 import torch
 
+from sim.kernels import Rows, find, step
 from sim.params import LIF
 
 State = tuple[torch.Tensor, torch.Tensor, torch.Tensor]
@@ -16,10 +17,14 @@ class FastLIF:
         self.bias = torch.from_numpy(np.zeros(self.n) if bias is None else np.asarray(bias)).to(dtype)
         self.w = torch.from_numpy(weights.toarray() * p.w_syn).to(dtype)
         self.w_in = torch.from_numpy(projection.toarray() * p.w_syn * p.input_gain).to(dtype)
+        self.rows, self.lines = Rows(self.w.numpy(), dtype), Rows(self.w_in.numpy(), dtype)
         # exact solution of dv/dt = (x + bias - (v - v_rest)) / tau_m, dx/dt = -x / tau_s over one step
         self.decay_v = math.exp(-p.dt / p.tau_m)
         self.decay_x = math.exp(-p.dt / p.tau_s)
         self.x_to_v = p.tau_s / (p.tau_s - p.tau_m) * (self.decay_x - self.decay_v)
+
+    def rewired(self) -> None:
+        self.rows = Rows(self.w.numpy(), self.dtype)
 
     def start(self, batch: int, state: State | None = None) -> State:
         if state is not None:
@@ -36,20 +41,14 @@ class FastLIF:
         scale = torch.ones(batch, dtype=self.dtype) if scale is None else torch.as_tensor(scale, dtype=self.dtype)
         rest = p.v_rest + self.bias
         for t in range(steps):
-            free = t - last >= p.ref_steps
-            v = torch.where(free, rest + (v - rest) * self.decay_v + x * self.x_to_v, v)
-            x = x * self.decay_x
-            spike = free & (v > p.v_th)
-            last = torch.where(spike, t, last)
-            # only the few neurons and input lines that spiked this step send anything
-            row, source = spike.nonzero(as_tuple=True)
-            if len(row):
-                x.index_add_(0, row, self.w[source])
-            row, line = inputs[t].nonzero(as_tuple=True)
-            if len(row):
-                x.index_add_(0, row, self.w_in[line] * scale[row, None])
-            v = torch.where(spike, p.v_reset, v)
-            yield spike
+            v, x, last, spike = step(v, x, last, torch.tensor(t), rest, self.decay_v, self.decay_x, self.x_to_v, p.v_reset, p.v_th, p.ref_steps)
+            fired = find(spike)
+            if len(fired[0]):
+                self.rows.send(x, *fired)
+            fed = find(inputs[t])
+            if len(fed[0]):
+                self.lines.send(x, *fed, scale)
+            yield spike, fired
         return v, x, last - steps
 
     def settle(self, steps: int) -> State:
@@ -62,9 +61,10 @@ class FastLIF:
 
     def counts(self, inputs: torch.Tensor, state: State | None = None, scale=None) -> torch.Tensor:
         total = torch.zeros((inputs.shape[1], self.n), dtype=torch.int32)
-        for spike in self.spikes(inputs, state, scale):
-            total += spike
+        flat = total.view(-1)
+        for _, (row, source) in self.spikes(inputs, state, scale):
+            flat.index_add_(0, row * self.n + source, torch.ones_like(row, dtype=torch.int32))
         return total
 
     def raster(self, inputs: torch.Tensor, state: State | None = None, scale=None) -> torch.Tensor:
-        return torch.stack(list(self.spikes(inputs, state, scale)))
+        return torch.stack([spike for spike, _ in self.spikes(inputs, state, scale)])

@@ -43,6 +43,7 @@ class Plasticity:
         w = torch.minimum(w, self.rule.ceiling * self.start)
         w += self.rule.recovery * (self.start - w)
         self.fly.sim.w[self.kc, self.mbon] = w
+        self.fly.sim.rewired()
 
     def depressed(self) -> float:
         existing = self.start > 0
@@ -53,3 +54,4 @@ class Plasticity:
 
     def load(self, weights: np.ndarray) -> None:
         self.fly.sim.w[self.kc, self.mbon] = torch.from_numpy(weights)
+        self.fly.sim.rewired()

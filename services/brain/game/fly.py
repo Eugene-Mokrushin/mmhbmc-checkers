@@ -14,9 +14,9 @@ from sim.fast import FastLIF
 from sim.inputs import background, board_lines, normalization, projection, regular
 from sim.params import LIF
 
-WINDOW = 1000
+WINDOW = 500
 SETTLE = 3000
-CHUNK = 256
+CHUNK = 1024
 
 
 class Fly(Player):
@@ -42,11 +42,14 @@ class Fly(Player):
         return torch.from_numpy(regular(lines, WINDOW, self.sim.p.input_period, self.phase)), normalization(lines)
 
     def counts(self, positions) -> np.ndarray:
+        # the fly is deterministic, so each distinct board is simulated once
+        unique = list(dict.fromkeys(positions))
         out = []
-        for i in range(0, len(positions), CHUNK):
-            spikes, scale = self.inputs(positions[i : i + CHUNK])
+        for i in range(0, len(unique), CHUNK):
+            spikes, scale = self.inputs(unique[i : i + CHUNK])
             out.append(self.sim.counts(spikes, self.rest, scale).numpy())
-        return np.concatenate(out)
+        where = {pos: i for i, pos in enumerate(unique)}
+        return np.concatenate(out)[[where[pos] for pos in positions]]
 
     def raster(self, position) -> np.ndarray:
         spikes, scale = self.inputs([position])
