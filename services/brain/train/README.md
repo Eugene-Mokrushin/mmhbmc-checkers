@@ -33,3 +33,35 @@ Every `--eval-every` games it saves the weights and plays the frozen fly
 against random, greedy and minimax (depth 2). Results go to
 `artifacts/runs/NAME/log.csv`, checkpoints to `artifacts/runs/NAME/fly-*.npz`,
 and the live status to `artifacts/progress.txt`.
+
+## Controls
+
+Phase 5 asks whether the fly's wiring matters or any similar circuit would do.
+`--control` trains the same pipeline on a different circuit
+(`connectome/controls.py`):
+
+- `degree`: connections shuffled so every neuron keeps its in- and out-degree
+  and every connection its weight.
+- `random`: the same number of connections and synapses, placed at random.
+- `compartments`: real wiring, but each MBON gets another MBON's dopamine
+  neurons, so reward no longer lands on the avoid MBONs.
+
+Shuffles stay inside each population pair (KC→MBON, APL→KC, ...). Mixed
+freely, APL would inhibit random cells and the control would fail for a
+trivial reason. Both rewired circuits pass the same sparsity gate as the real
+one (6-9% of Kenyon cells active).
+
+Ten seeds per condition, then the comparison:
+
+```bash
+for seed in 0 1 2 3 4 5 6 7 8 9; do
+  for control in real degree random compartments; do
+    python -m train.selfplay --run c-$control-$seed --control $control --seed $seed \
+      --games 2048 --eval-every 2048
+  done
+done
+python -m train.report --pattern "c-*"
+```
+
+The report gives each condition's final win rates and its gain over its own
+untrained start, with Welch's t-test against the real wiring.
