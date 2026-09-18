@@ -3,6 +3,7 @@ import random
 import numpy as np
 import scipy.sparse as sp
 
+from connectome.controls import rewire
 from connectome.extract import MushroomBody
 from connectome.load import load
 from flycore.board import INITIAL, Position, apply_move
@@ -44,10 +45,16 @@ def measure(fly: Fly, positions: list[Position]) -> dict:
 
 def main() -> None:
     fly = Fly(load())
-    no_apl = fly.with_weights(without_apl(fly.mb))
+    rng = np.random.default_rng(0)
+    variants = {
+        "real": fly,
+        "no APL": fly.with_weights(without_apl(fly.mb)),
+        "degree": fly.with_weights(rewire(fly.mb, "degree", rng)),
+        "random": fly.with_weights(rewire(fly.mb, "random", rng)),
+    }
     rows = []
-    with Progress(2 * len(BINS), "sparsity gate") as bar:
-        for name, f in (("APL", fly), ("no APL", no_apl)):
+    with Progress(len(variants) * len(BINS), "sparsity gate") as bar:
+        for name, f in variants.items():
             for pieces, bounds in BINS.items():
                 rows.append((name, pieces, measure(f, game_positions(bounds, PER_BIN))))
                 bar.update(active_kc=float(rows[-1][2]["active"]))

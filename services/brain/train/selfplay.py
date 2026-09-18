@@ -2,12 +2,13 @@ import argparse
 
 import numpy as np
 
-from connectome.load import load
+from connectome.controls import CONTROLS
 from flycore.board import apply_move
 from game.arena import OPPONENTS, Game, finish, step
 from game.fly import Fly
 from game.players import Player, material
 from progress import Progress
+from train.controls import setup
 from train.evaluate import Run, evaluate
 from train.plasticity import Plasticity, Rule
 
@@ -54,6 +55,7 @@ def main() -> None:
     parser.add_argument("--run", default="shaped-random")
     parser.add_argument("--games", type=int, default=20000)
     parser.add_argument("--opponent", choices=OPPONENTS, default="random")
+    parser.add_argument("--control", choices=CONTROLS, default="real")
     parser.add_argument("--reward", choices=("shaped", "terminal"), default="shaped")
     parser.add_argument("--parallel", type=int, default=256)
     parser.add_argument("--eval-every", type=int, default=2048)
@@ -64,9 +66,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
-    fly = Fly(load(), seed=args.seed)
-    fly.explore = args.explore
-    plastic = Plasticity(fly, Rule(rate=args.rate, decay=args.decay))
+    fly, plastic = setup(args.control, args.seed, Rule(rate=args.rate, decay=args.decay), args.explore)
     opponent = OPPONENTS[args.opponent](seed=args.seed + 1)
     run = Run(args.run, vars(args))
     run.record({"games": 0, **evaluate(fly, args.eval_games, args.seed + 2)})

@@ -20,12 +20,12 @@ class Plasticity:
     # active KCs (Hige et al. 2015) and strengthens those from silent ones (Cohn
     # et al. 2015). Reward reaches MBONs in PAM compartments, punishment those in
     # PPL1 compartments, each through its real DAN contacts.
-    def __init__(self, fly: Fly, rule: Rule = Rule()):
+    def __init__(self, fly: Fly, rule: Rule = Rule(), share: np.ndarray | None = None):
         self.fly, self.rule = fly, rule
         self.kc = torch.from_numpy(fly.mb.members("KC"))[:, None]
         self.mbon = torch.from_numpy(fly.mb.members("MBON"))
         self.start = self.weights.clone()
-        self.reward_share = torch.from_numpy(reward_share(fly.mb)).float()
+        self.reward_share = torch.from_numpy(reward_share(fly.mb) if share is None else share).float()
 
     @property
     def weights(self) -> torch.Tensor:

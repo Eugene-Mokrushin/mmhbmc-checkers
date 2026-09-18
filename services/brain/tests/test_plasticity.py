@@ -5,6 +5,7 @@ import torch
 import progress
 from game.fly import Fly
 from game.players import RandomPlayer
+from train.controls import setup
 from train.plasticity import Plasticity, Rule
 from train.selfplay import block
 
@@ -56,3 +57,11 @@ def test_training_block_plays_to_the_end(fly, tmp_path, monkeypatch):
     stats = block(fly, Plasticity(fly), RandomPlayer(1), 2, shaped=True)
     assert set(stats) == {"train_win", "kc_active", "mbon_hz"}
     assert 0 <= stats["train_win"] <= 1
+
+
+@pytest.mark.parametrize("control", ["real", "degree", "random", "compartments"])
+def test_every_control_builds_a_working_learner(brain, control):
+    fly, plastic = setup(control, seed=0, rule=Rule(), explore=0.1, c=brain)
+    assert fly.explore == 0.1
+    assert plastic.weights.shape == (2, 1)
+    plastic.update(np.array([[1, 0]]), np.array([1.0]))
