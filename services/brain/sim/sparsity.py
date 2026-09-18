@@ -1,17 +1,17 @@
+import random
+
 import numpy as np
 import scipy.sparse as sp
-import torch
 
-from connectome.extract import MushroomBody, extract
+from connectome.extract import MushroomBody
 from connectome.load import load
+from flycore.board import INITIAL, Position, apply_move
+from flycore.moves import legal_moves
+from game.fly import Fly
 from progress import Progress
-from sim.fast import FastLIF
-from sim.inputs import poisson, projection, random_lines
-from sim.params import LIF
 
-STEPS = 1000
-BATCH = 32
-ACTIVE_LINES = (4, 8, 12, 16, 24)
+BINS = {"2-8": (2, 8), "9-16": (9, 16), "17-24": (17, 24)}
+PER_BIN = 64
 
 
 def jaccard(a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -23,37 +23,37 @@ def without_apl(mb: MushroomBody) -> sp.csr_array:
     return (sp.diags_array(keep) @ mb.graph.weights()).tocsr()
 
 
-def kc_codes(sim: FastLIF, mb: MushroomBody, lines: np.ndarray, rng: np.random.Generator) -> np.ndarray:
-    p = sim.p
-    counts = sim.counts(torch.from_numpy(poisson(lines, STEPS, p.input_rate, p.dt, rng))).numpy()
-    return counts[:, mb.members("KC")] > 0
+def game_positions(pieces: tuple[int, int], n: int, seed: int = 0) -> list[Position]:
+    rnd, out = random.Random(seed), []
+    while len(out) < n:
+        pos = INITIAL
+        for _ in range(rnd.randint(0, 80)):
+            moves = legal_moves(pos)
+            if not moves:
+                break
+            pos = apply_move(pos, rnd.choice(moves))
+        if pieces[0] <= pos.occupied.bit_count() <= pieces[1]:
+            out.append(pos)
+    return out
 
 
-def measure(sim: FastLIF, mb: MushroomBody, active: int, rng: np.random.Generator) -> dict:
-    lines = random_lines(BATCH, active, rng)
-    first, again = kc_codes(sim, mb, lines, rng), kc_codes(sim, mb, lines, rng)
-    return {
-        "active": first.mean(),
-        "overlap": jaccard(first, np.roll(first, 1, axis=0)).mean(),
-        "repeat": jaccard(first, again).mean(),
-    }
+def measure(fly: Fly, positions: list[Position]) -> dict:
+    kc = fly.counts(positions)[:, fly.mb.members("KC")] > 0
+    return {"active": kc.mean(), "overlap": jaccard(kc, np.roll(kc, 1, axis=0)).mean()}
 
 
 def main() -> None:
-    rng = np.random.default_rng(0)
-    c = load()
-    mb = extract(c)
-    proj = projection(c, mb, rng)
-    sims = {"APL": FastLIF(mb.graph.weights(), proj, LIF()), "no APL": FastLIF(without_apl(mb), proj, LIF())}
+    fly = Fly(load())
+    no_apl = fly.with_weights(without_apl(fly.mb))
     rows = []
-    with Progress(len(sims) * len(ACTIVE_LINES), "sparsity gate") as bar:
-        for name, sim in sims.items():
-            for active in ACTIVE_LINES:
-                rows.append((name, active, measure(sim, mb, active, rng)))
-                bar.update(active_kc=rows[-1][2]["active"])
-    print(f"{'':8}{'lines':>6}{'KCs active':>12}{'overlap':>10}{'repeat':>9}")
-    for name, active, r in rows:
-        print(f"{name:8}{active:>6}{r['active']:>12.1%}{r['overlap']:>10.2f}{r['repeat']:>9.2f}")
+    with Progress(2 * len(BINS), "sparsity gate") as bar:
+        for name, f in (("APL", fly), ("no APL", no_apl)):
+            for pieces, bounds in BINS.items():
+                rows.append((name, pieces, measure(f, game_positions(bounds, PER_BIN))))
+                bar.update(active_kc=float(rows[-1][2]["active"]))
+    print(f"{'':8}{'pieces':>7}{'KCs active':>12}{'overlap':>10}")
+    for name, pieces, r in rows:
+        print(f"{name:8}{pieces:>7}{r['active']:>12.1%}{r['overlap']:>10.2f}")
 
 
 if __name__ == "__main__":

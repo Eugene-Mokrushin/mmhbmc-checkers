@@ -5,12 +5,13 @@ import scipy.sparse as sp
 from sim.params import LIF
 
 EQUATIONS = """
-dv/dt = (x - (v - v_rest)) / tau_m : volt (unless refractory)
+dv/dt = (x + bias - (v - v_rest)) / tau_m : volt (unless refractory)
 dx/dt = -x / tau_s : volt
+bias : volt (constant)
 """
 
 
-def raster(weights: sp.csr_array, projection: sp.csr_array, inputs: np.ndarray, p: LIF = LIF()) -> np.ndarray:
+def raster(weights: sp.csr_array, projection: sp.csr_array, inputs: np.ndarray, p: LIF = LIF(), bias=None) -> np.ndarray:
     b2.prefs.codegen.target = "numpy"
     b2.defaultclock.dt = p.dt * b2.second
     steps, n_lines = inputs.shape
@@ -32,6 +33,8 @@ def raster(weights: sp.csr_array, projection: sp.csr_array, inputs: np.ndarray, 
         namespace=namespace,
     )
     neurons.v = p.v_rest * b2.volt
+    if bias is not None:
+        neurons.bias = np.asarray(bias) * b2.volt
 
     step, line = np.nonzero(inputs)
     board = b2.SpikeGeneratorGroup(n_lines, line, step * p.dt * b2.second)

@@ -18,8 +18,9 @@ def duration(seconds: float | None) -> str:
 
 
 class Progress:
-    def __init__(self, total, label, path=PROGRESS_FILE, every=5.0, clock=time.monotonic, stream=sys.stderr):
-        self.total, self.label, self.path, self.every = total, label, Path(path), every
+    def __init__(self, total, label, path=None, every=5.0, clock=time.monotonic, stream=sys.stderr):
+        self.total, self.label, self.every = total, label, every
+        self.path = Path(path) if path else PROGRESS_FILE
         self.clock, self.stream = clock, stream
         self.done, self.stats = 0, {}
         self.start = self.last = clock()
