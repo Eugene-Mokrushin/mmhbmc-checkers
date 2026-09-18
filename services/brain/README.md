@@ -57,27 +57,38 @@ DANs contact which MBONs, not from a hand-written table. DPM is left out.
 Current-based leaky integrate-and-fire neurons with Shiu et al. 2024 constants
 (`sim/params.py`), stepped at 0.1 ms. `sim/reference.py` is the Brian2 model,
 `sim/fast.py` the PyTorch one used everywhere else. On the right mushroom body
-the two produce identical spike rasters (`tests/test_equivalence.py`).
+the two produce identical spike rasters (`tests/test_equivalence.py`). The fast
+one only sends weights from neurons that spiked, so a batch of 64 positions
+costs about 14 ms each on a laptop CPU.
 
-The fast simulator only sends weights from neurons that spiked on a step, so
-one position takes about 80 ms, 8 candidates about 0.3 s, and batches of 64
-about 14 ms per position on a laptop CPU.
+Board input, in `sim/inputs.py`:
 
-Each Kenyon cell keeps its real projection-neuron claws (median 6), with their
-synapse counts, rewired to random board lines. 126 Kenyon cells have no such
-input and are never driven by the board.
+- Each Kenyon cell keeps its real projection-neuron claws (median 6) and their
+  synapse counts, rewired to random board lines. 126 Kenyon cells have none.
+- Every piece lights one line, which fires a regular 150 Hz train with its own
+  fixed offset. The same board always gives the same spikes, so the fly's
+  score for a position is repeatable.
+- Input synapses are 2.5x the standard weight, scaled by sqrt(24 / pieces) the
+  way the antennal lobe normalizes odor strength. That keeps 7-9% of Kenyon
+  cells active from opening to endgame (`python -m sim.sparsity`). Without APL
+  the whole layer fires.
+- MBONs get a constant 7.3 mV background input standing in for the third of
+  their synapses that come from outside the mushroom body, which gives them a
+  resting rate around 12 Hz. Every evaluation starts from a settled resting
+  state rather than from silence.
 
-`python -m sim.sparsity` runs the sparsity gate. PN->KC synapses are 1.75x the
-standard weight, which puts 5-10% of Kenyon cells in play for 12-24 active
-lines, with different inputs sharing few of them. Without APL the whole layer
-fires from 8 lines up.
+## Playing
 
-Known weak spots:
+`game/fly.py` scores the board each legal move leaves behind: approach MBON
+spikes minus avoid MBON spikes over 100 ms, ties broken at random. Valence comes
+from compartments (Aso et al. 2014): MBONs mostly contacted by reward (PAM)
+DANs drive avoidance, those contacted by punishment (PPL1) DANs drive approach.
+That gives 23 approach and 25 avoid MBONs.
 
-- Endgames with 8 or fewer pieces light only ~3% of Kenyon cells.
-- The same board run twice shares about half its active Kenyon cells.
-- MBONs barely fire (a few Hz). A third of their real input comes from
-  outside the mushroom body and isn't modelled.
+`python -m game.arena --games N --opponent random|greedy|minimax` plays the fly
+against a baseline, many games at once. Because captures are mandatory, the
+one-move greedy player is barely better than random; minimax at depth 2 is the
+first real step up. Games are drawn after 200 plies.
 
 ## Conventions
 

@@ -13,9 +13,15 @@ class LIF:
     t_ref: float = 2.2e-3
     w_syn: float = 0.275e-3
     input_rate: float = 150.0
-    # PN->KC synapses relative to w_syn, tuned so 9-24 piece boards activate 5-10% of KCs
-    input_gain: float = 1.75
+    # PN->KC synapses relative to w_syn, tuned so game positions activate 5-10% of KCs
+    input_gain: float = 2.5
+    # background input to MBONs, about 10 Hz at rest
+    mbon_drive: float = 7.3e-3
 
     @property
     def ref_steps(self) -> int:
         return round(self.t_ref / self.dt)
+
+    @property
+    def input_period(self) -> int:
+        return round(1 / (self.input_rate * self.dt))

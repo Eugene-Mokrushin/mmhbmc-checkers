@@ -1,11 +1,9 @@
 import numpy as np
 import pytest
 
-from connectome.extract import extract
 from connectome.load import NPZ_PATH, load
-from sim.fast import FastLIF
-from sim.inputs import projection
-from sim.sparsity import measure, without_apl
+from game.fly import Fly
+from sim.sparsity import BINS, game_positions, measure, without_apl
 
 pytestmark = [
     pytest.mark.data,
@@ -15,14 +13,17 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def setup():
-    c = load()
-    mb = extract(c)
-    return c, mb, projection(c, mb, np.random.default_rng(0))
+def c():
+    return load()
 
 
-def test_projection_keeps_each_kcs_real_claws(setup):
-    c, mb, proj = setup
+@pytest.fixture(scope="module")
+def fly(c):
+    return Fly(c)
+
+
+def test_projection_keeps_each_kcs_real_claws(c, fly):
+    mb, proj = fly.mb, fly.projection
     kcs = mb.members("KC")
     claws = c.counts[np.flatnonzero(c.cell_class == "ALPN")][:, mb.neurons[kcs]]
     assert np.array_equal(proj[:, kcs].sum(axis=0), claws.sum(axis=0))
@@ -30,16 +31,14 @@ def test_projection_keeps_each_kcs_real_claws(setup):
     assert proj[:, mb.population != "KC"].nnz == 0
 
 
-@pytest.mark.parametrize("lines", [16, 24])
-def test_kenyon_cells_are_sparse_and_distinct(setup, lines):
-    _, mb, proj = setup
-    r = measure(FastLIF(mb.graph.weights(), proj), mb, lines, np.random.default_rng(1))
-    assert 0.05 <= r["active"] <= 0.10
-    assert r["overlap"] < 0.15
-    assert r["repeat"] > 3 * r["overlap"]
+@pytest.mark.parametrize("pieces", list(BINS))
+def test_kenyon_cells_are_sparse_at_every_stage_of_a_game(fly, pieces):
+    assert 0.05 <= measure(fly, game_positions(BINS[pieces], 64))["active"] <= 0.10
 
 
-def test_apl_is_what_keeps_the_code_sparse(setup):
-    _, mb, proj = setup
-    r = measure(FastLIF(without_apl(mb), proj), mb, 16, np.random.default_rng(1))
-    assert r["active"] > 0.5
+def test_different_positions_get_different_codes(fly):
+    assert measure(fly, game_positions(BINS["9-16"], 64))["overlap"] < 0.2
+
+
+def test_apl_is_what_keeps_the_code_sparse(fly):
+    assert measure(fly.with_weights(without_apl(fly.mb)), game_positions(BINS["9-16"], 32))["active"] > 0.5

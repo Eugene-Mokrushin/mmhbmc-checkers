@@ -1,6 +1,6 @@
 import random
 
-from flycore.board import INITIAL, apply_move, render
+from flycore.board import INITIAL, apply_move, flip, render
 from flycore.moves import legal_moves
 from flycore.squares import mask, reverse32
 
@@ -16,6 +16,19 @@ def test_reverse32_is_its_own_inverse():
         assert reverse32(reverse32(m)) == m
     assert reverse32(mask(0)) == mask(31)
     assert reverse32(INITIAL.own_men) == INITIAL.opp_men
+
+
+def test_flip_twice_is_identity():
+    rng = random.Random(1)
+    for _ in range(100):
+        pos = INITIAL
+        for _ in range(rng.randint(0, 40)):
+            moves = legal_moves(pos)
+            if not moves:
+                break
+            pos = apply_move(pos, rng.choice(moves))
+        assert flip(flip(pos)) == pos
+    assert flip(INITIAL) == INITIAL
 
 
 def test_apply_move_hands_the_board_to_the_opponent():

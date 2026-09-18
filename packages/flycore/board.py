@@ -52,11 +52,15 @@ def apply_move(pos: Position, move: Move) -> Position:
             own_men |= dest
 
     # positions are always seen from the side to move
+    return flip(Position(own_men, own_kings, pos.opp_men & ~move.captured, pos.opp_kings & ~move.captured))
+
+
+def flip(pos: Position) -> Position:
     return Position(
-        own_men=reverse32(pos.opp_men & ~move.captured),
-        own_kings=reverse32(pos.opp_kings & ~move.captured),
-        opp_men=reverse32(own_men),
-        opp_kings=reverse32(own_kings),
+        own_men=reverse32(pos.opp_men),
+        own_kings=reverse32(pos.opp_kings),
+        opp_men=reverse32(pos.own_men),
+        opp_kings=reverse32(pos.own_kings),
     )
 
 
