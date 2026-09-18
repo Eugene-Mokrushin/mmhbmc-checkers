@@ -1,0 +1,10 @@
+data/
+artifacts/*
+!artifacts/.gitkeep
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+.DS_Store
