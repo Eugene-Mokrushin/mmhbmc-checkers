@@ -1,0 +1,3 @@
+-r services/brain/requirements.txt
+-e packages/flycore
+pytest==9.1.1
