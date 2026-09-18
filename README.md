@@ -24,6 +24,7 @@ cd services/brain
 ../../.venv/bin/python -m connectome.export   # artifacts/neurons.json
 ../../.venv/bin/python -m sim.sparsity        # phase 2 gate
 ../../.venv/bin/python -m game.arena --games 200 --opponent random
+../../.venv/bin/python -m train.selfplay --run first --games 20000
 cd ../..
 .venv/bin/pytest
 ```
@@ -59,4 +60,5 @@ watch cat artifacts/progress.txt
 - Signs come from predicted transmitters.
 - No gap junctions, and only one hemisphere.
 - Only KC→MBON synapses learn. Everything upstream keeps its connectome
-  weights.
+  weights. Learning both weakens and strengthens them; weakening alone ran
+  every synapse down.
