@@ -5,6 +5,7 @@ import torch
 import progress
 from connectome.load import NPZ_PATH, load
 from flycore.board import INITIAL, apply_move, flip
+from flycore.encode import N_LINES
 from flycore.moves import legal_moves
 from game.arena import play
 from game.fly import WINDOW, Fly
@@ -28,7 +29,7 @@ def test_valence_split(fly):
 
 
 def test_mbons_rest_near_ten_hz(fly):
-    silence = torch.zeros((WINDOW, 1, 128), dtype=torch.bool)
+    silence = torch.zeros((WINDOW, 1, N_LINES), dtype=torch.bool)
     rates = fly.sim.counts(silence, fly.rest).numpy()[0, fly.mb.members("MBON")] / (WINDOW * fly.sim.p.dt)
     assert 5 <= np.median(rates) <= 20
 

@@ -9,7 +9,7 @@ from scipy import stats
 from connectome.controls import CONTROLS
 from train.evaluate import RUNS_DIR
 
-OPPONENTS = ("random", "greedy", "minimax2", "untrained")
+METRICS = ("random", "greedy", "minimax2", "untrained", "safety", "material")
 
 
 def load_runs(pattern: str, runs_dir: Path = RUNS_DIR) -> list[dict]:
@@ -22,10 +22,10 @@ def load_runs(pattern: str, runs_dir: Path = RUNS_DIR) -> list[dict]:
     return runs
 
 
-def compare(runs: list[dict], opponent: str) -> list[dict]:
-    runs = [r for r in runs if r["first"].get(opponent) and r["last"].get(opponent)]
-    gain = {c: np.array([float(r["last"][opponent]) - float(r["first"][opponent]) for r in runs if r["control"] == c]) for c in CONTROLS}
-    final = {c: np.array([float(r["last"][opponent]) for r in runs if r["control"] == c]) for c in CONTROLS}
+def compare(runs: list[dict], metric: str) -> list[dict]:
+    runs = [r for r in runs if r["first"].get(metric) and r["last"].get(metric)]
+    gain = {c: np.array([float(r["last"][metric]) - float(r["first"][metric]) for r in runs if r["control"] == c]) for c in CONTROLS}
+    final = {c: np.array([float(r["last"][metric]) for r in runs if r["control"] == c]) for c in CONTROLS}
     out = []
     for c in CONTROLS:
         if not len(gain[c]):
@@ -42,11 +42,14 @@ def main() -> None:
     parser.add_argument("--pattern", default="*", help="which run directories to compare, e.g. 'c2048-*'")
     args = parser.parse_args()
     runs = load_runs(args.pattern)
-    print(f"{len(runs)} runs matching {args.pattern!r}; win rates after training, gain over the untrained fly")
-    for opponent in OPPONENTS:
-        print(f"\nvs {opponent}")
+    print(f"{len(runs)} runs matching {args.pattern!r}; win rates and skill AUCs after training, gain over the untrained fly")
+    for metric in METRICS:
+        rows = compare(runs, metric)
+        if not rows:
+            continue
+        print(f"\n{metric}")
         print(f"{'':14}{'n':>3}{'final':>16}{'gain':>16}{'p vs real':>11}")
-        for row in compare(runs, opponent):
+        for row in rows:
             f, g = row["final"], row["gain"]
             p = "" if np.isnan(row["p"]) else f"{row['p']:.3f}"
             print(f"{row['control']:14}{row['n']:>3}{f.mean():>9.1%} ± {f.std(ddof=1) if len(f) > 1 else 0:.1%}"

@@ -1,5 +1,6 @@
 import io
 
+import progress
 from progress import Progress, duration
 
 
@@ -45,3 +46,13 @@ def test_final_line_goes_to_logs_when_not_a_terminal(tmp_path):
         p.update(3)
     assert stream.getvalue().startswith("run [####################] 3/3 100.0%")
     assert stream.getvalue().count("\n") == 1
+
+
+def test_named_runs_write_their_own_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(progress, "PROGRESS_DIR", tmp_path)
+    monkeypatch.setattr(progress, "PROGRESS_FILE", tmp_path / "latest.txt")
+    monkeypatch.setattr(progress, "RUN", "")
+    progress.use("b-random")
+    with Progress(4, "eval vs greedy", clock=Clock(), stream=io.StringIO()):
+        pass
+    assert (tmp_path / "b-random.txt").read_text().startswith("b-random: eval vs greedy [")

@@ -11,7 +11,7 @@ from flycore.encode import N_LINES
 from game.decode import score, valence
 from game.players import Player, candidates
 from sim.fast import FastLIF
-from sim.inputs import background, board_lines, normalization, projection, regular
+from sim.inputs import background, board_lines, projection, regular
 from sim.params import LIF
 
 WINDOW = 500
@@ -43,23 +43,20 @@ class Fly(Player):
         # plasticity edits the simulator's weights, never the wiring the fly started with
         return self.with_weights(self.wiring)
 
-    def inputs(self, positions) -> tuple[torch.Tensor, np.ndarray]:
-        lines = board_lines(positions)
-        return torch.from_numpy(regular(lines, WINDOW, self.sim.p.input_period, self.phase)), normalization(lines)
+    def inputs(self, positions) -> torch.Tensor:
+        return torch.from_numpy(regular(board_lines(positions), WINDOW, self.sim.p.input_period, self.phase))
 
     def counts(self, positions) -> np.ndarray:
         # the fly is deterministic, so each distinct board is simulated once
         unique = list(dict.fromkeys(positions))
         out = []
         for i in range(0, len(unique), CHUNK):
-            spikes, scale = self.inputs(unique[i : i + CHUNK])
-            out.append(self.sim.counts(spikes, self.rest, scale).numpy())
+            out.append(self.sim.counts(self.inputs(unique[i : i + CHUNK]), self.rest).numpy())
         where = {pos: i for i, pos in enumerate(unique)}
         return np.concatenate(out)[[where[pos] for pos in positions]]
 
     def raster(self, position) -> np.ndarray:
-        spikes, scale = self.inputs([position])
-        return self.sim.raster(spikes, self.rest, scale)[:, 0].numpy()
+        return self.sim.raster(self.inputs([position]), self.rest)[:, 0].numpy()
 
     def scores(self, after):
         return score(self.counts(after), self.mb, self.valence).tolist()

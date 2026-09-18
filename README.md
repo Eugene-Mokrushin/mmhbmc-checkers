@@ -35,10 +35,11 @@ instead of ~55 s).
 Details on the data, the mushroom body and the simulator are in
 `services/brain/README.md`.
 
-Long runs rewrite a one-line status to `artifacts/progress.txt`:
+Long runs keep a one-line status per job in `artifacts/progress/` (training
+runs are named after `--run`). To follow every job at once:
 
 ```bash
-watch cat artifacts/progress.txt
+while true; do clear; cat artifacts/progress/*.txt; sleep 5; done
 ```
 
 ## Conventions
@@ -52,13 +53,14 @@ watch cat artifacts/progress.txt
 - The board drives Kenyon cells directly. 128 input lines don't fit through
   the ~50 projection neurons of the real olfactory pathway.
 - Starting weights are synapse counts, not measured strengths. Board input
-  synapses are scaled up and normalized by piece count to reach the Kenyon
-  cell sparsity of a real fly.
+  synapses are scaled up (2.4x) to reach the Kenyon cell sparsity of a real fly.
+- Each Kenyon cell reads three squares on one diagonal, not random inputs, so
+  it can detect local shapes.
 - Board lines fire regular spike trains, not noisy ones.
 - MBONs get a constant background input in place of the inputs from outside
   the mushroom body that aren't modelled.
 - Signs come from predicted transmitters.
 - No gap junctions, and only one hemisphere.
 - Only KC→MBON synapses learn. Everything upstream keeps its connectome
-  weights. Learning both weakens and strengthens them; weakening alone ran
-  every synapse down.
+  weights. Dopamine signals surprise and can both weaken and strengthen a
+  synapse; the planned weakening-only rule stopped the fly learning.

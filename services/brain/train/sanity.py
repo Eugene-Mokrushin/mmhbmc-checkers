@@ -1,7 +1,6 @@
 import argparse
 
 import numpy as np
-from scipy.stats import rankdata
 
 from connectome.load import load
 from flycore.board import Position
@@ -10,6 +9,7 @@ from game.players import material
 from progress import Progress
 from sim.sparsity import game_positions
 from train.plasticity import Plasticity, Rule
+from train.skills import auc
 
 BATCH = 64
 
@@ -17,12 +17,6 @@ BATCH = 64
 def labelled(n: int, seed: int) -> tuple[list[Position], np.ndarray]:
     positions = [p for p in game_positions((2, 24), 3 * n, seed) if material(p) != 0][:n]
     return positions, np.sign([material(p) for p in positions])
-
-
-def auc(scores: np.ndarray, labels: np.ndarray) -> float:
-    ranks = rankdata(scores)
-    ahead, behind = (labels > 0).sum(), (labels < 0).sum()
-    return float((ranks[labels > 0].sum() - ahead * (ahead + 1) / 2) / (ahead * behind))
 
 
 def evaluate(fly: Fly, positions: list[Position], labels: np.ndarray) -> float:
@@ -42,15 +36,15 @@ def main() -> None:
     plastic = Plasticity(fly, Rule(rate=args.rate, decay=0.0, recovery=args.recovery))
     train, train_labels = labelled(args.train, seed=1)
     test, test_labels = labelled(args.test, seed=2)
-    kc = fly.mb.members("KC")
+    kc, mbon = fly.mb.members("KC"), fly.mb.members("MBON")
 
     print(f"before: AUC {evaluate(fly, test, test_labels):.3f} (0.5 = chance, 1.0 = perfect)")
     with Progress(args.epochs * len(train), "sanity: material") as bar:
         for epoch in range(args.epochs):
             for i in range(0, len(train), BATCH):
-                active = fly.counts(train[i : i + BATCH])[:, kc] > 0
-                plastic.update(active, train_labels[i : i + BATCH])
-                bar.update(len(active), epoch=epoch + 1, depressed=plastic.depressed())
+                counts = fly.counts(train[i : i + BATCH])
+                plastic.update(counts[:, kc] > 0, train_labels[i : i + BATCH], counts[:, mbon] @ fly.valence)
+                bar.update(len(counts), epoch=epoch + 1, depressed=plastic.depressed())
             print(f"epoch {epoch + 1}: AUC {evaluate(fly, test, test_labels):.3f}, depressed {plastic.depressed():.1%}")
 
 
