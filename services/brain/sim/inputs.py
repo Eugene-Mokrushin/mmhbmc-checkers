@@ -4,48 +4,44 @@ import scipy.sparse as sp
 from connectome.extract import MushroomBody
 from connectome.graph import Connectome
 from flycore.board import Position
-from flycore.encode import encode
+from flycore.encode import N_LINES, encode, square_lines
+from flycore.squares import JUMP
 from sim.params import LIF
 
-N_LINES = 128
-FULL_BOARD = 24
+# every run of three squares along a diagonal: a piece, its neighbour, the square behind
+DIAGONALS = [(s, over, land) for s in range(32) for over, land in JUMP[s] if land >= 0]
 
 
-def projection(c: Connectome, mb: MushroomBody, rng: np.random.Generator, n_lines: int = N_LINES) -> sp.csr_array:
+def projection(c: Connectome, mb: MushroomBody, rng: np.random.Generator) -> sp.csr_array:
     # Each KC keeps its real claws, one per projection neuron with that neuron's
-    # synapse count, but the claws are rewired to random board lines.
+    # synapse count, but they read three squares on one diagonal. A KC can then
+    # fire for a local shape like "my man, their man, empty square behind".
     kcs = mb.members("KC")
     pns = np.flatnonzero(c.cell_class == "ALPN")
     claws = c.counts[pns][:, mb.neurons[kcs]].tocsc()
     lines, targets, counts = [], [], []
     for j, kc in enumerate(kcs):
-        synapses = claws.data[claws.indptr[j] : claws.indptr[j + 1]]
-        lines.append(rng.choice(n_lines, size=len(synapses), replace=False))
+        field = [line for square in DIAGONALS[rng.integers(len(DIAGONALS))] for line in square_lines(square)]
+        synapses = np.sort(claws.data[claws.indptr[j] : claws.indptr[j + 1]])[::-1][: len(field)]
+        lines.append(rng.choice(field, size=len(synapses), replace=False))
         targets.append(np.full(len(synapses), kc))
         counts.append(synapses)
     coo = (np.concatenate(counts), (np.concatenate(lines), np.concatenate(targets)))
-    return sp.csr_array(coo, shape=(n_lines, mb.graph.n))
+    return sp.csr_array(coo, shape=(N_LINES, mb.graph.n))
 
 
-def random_lines(batch: int, active: int, rng: np.random.Generator, n_lines: int = N_LINES) -> np.ndarray:
-    out = np.zeros((batch, n_lines), dtype=bool)
-    for row in out:
-        row[rng.choice(n_lines, size=active, replace=False)] = True
-    return out
-
-
-def board_lines(positions: list[Position], n_lines: int = N_LINES) -> np.ndarray:
-    out = np.zeros((len(positions), n_lines), dtype=bool)
+def board_lines(positions: list[Position]) -> np.ndarray:
+    out = np.zeros((len(positions), N_LINES), dtype=bool)
     for row, pos in zip(out, positions):
         row[encode(pos)] = True
     return out
 
 
-def normalization(lines: np.ndarray) -> np.ndarray:
-    # The antennal lobe we bypass normalizes its output across odor strengths
-    # (Olsen et al. 2010). Scaling by sqrt(24 / pieces) keeps 5-10% of KCs active
-    # from opening to endgame.
-    return np.sqrt(FULL_BOARD / np.maximum(lines.sum(axis=1), 1))
+def random_lines(batch: int, active: int, rng: np.random.Generator) -> np.ndarray:
+    out = np.zeros((batch, N_LINES), dtype=bool)
+    for row in out:
+        row[rng.choice(N_LINES, size=active, replace=False)] = True
+    return out
 
 
 def regular(lines: np.ndarray, steps: int, period: int, phase: np.ndarray) -> np.ndarray:

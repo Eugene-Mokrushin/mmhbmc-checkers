@@ -36,7 +36,7 @@ def test_untrained_copy_keeps_the_starting_wiring(brain):
     fly = Fly(brain)
     plastic = Plasticity(fly)
     start = plastic.state()
-    plastic.update(np.array([[1, 0]]), np.array([1.0]))
+    plastic.update(np.array([[1, 0]]), np.array([1.0]), np.array([0.0]))
     copy = fly.untrained()
     assert np.array_equal(Plasticity(copy).state(), start)
     assert not np.array_equal(plastic.state(), start)
@@ -58,9 +58,24 @@ def test_restore_rebuilds_a_saved_fly(brain, tmp_path, monkeypatch):
     monkeypatch.setattr(evaluate, "RUNS_DIR", tmp_path)
     monkeypatch.setattr(curve, "RUNS_DIR", tmp_path)
     fly, plastic = curve.setup("real", 4, curve.Rule(), explore=0.0, c=brain)
-    plastic.update(np.array([[1, 0]]), np.array([1.0]))
+    plastic.update(np.array([[1, 0]]), np.array([1.0]), np.array([0.0]))
     run = evaluate.Run("saved", {"control": "real", "seed": 4})
     run.checkpoint(plastic, 256, seed=4)
     restored, restored_plastic = curve.restore("saved", 256, c=brain)
     assert np.array_equal(restored_plastic.state(), plastic.state())
     assert restored.untrained() is not restored
+
+
+def test_checkpoint_file_finds_latest_or_named(tmp_path, monkeypatch, brain):
+    monkeypatch.setattr(evaluate, "RUNS_DIR", tmp_path)
+    plastic = Plasticity(Fly(brain))
+    run = evaluate.Run("r", {})
+    for games in (256, 1024):
+        run.checkpoint(plastic, games, seed=0)
+    assert evaluate.checkpoint_file("r").name == "fly-0001024.npz"
+    assert evaluate.checkpoint_file("r@256").name == "fly-0000256.npz"
+
+
+def test_evaluation_can_be_limited_to_some_opponents(brain, tmp_path, monkeypatch):
+    monkeypatch.setattr(progress, "PROGRESS_FILE", tmp_path / "progress.txt")
+    assert set(evaluate.evaluate(Fly(brain), 2, seed=0, against=["random"])) == {"random"}

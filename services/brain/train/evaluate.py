@@ -13,19 +13,28 @@ from paths import ARTIFACTS_DIR
 from train.plasticity import Plasticity
 
 RUNS_DIR = ARTIFACTS_DIR / "runs"
-COLUMNS = ["minutes", "games", "random", "greedy", "minimax2", "untrained", "train_win", "kc_active", "mbon_hz", "depressed"]
+COLUMNS = ["minutes", "games", "random", "greedy", "minimax2", "untrained", "safety", "material", "train_win", "kc_active", "mbon_hz", "depressed"]
 
 
 def baselines(seed: int) -> dict:
     return {"random": RandomPlayer(seed), "greedy": GreedyPlayer(seed), "minimax2": MinimaxPlayer(2, seed)}
 
 
-def evaluate(fly: Fly, games: int, seed: int) -> dict[str, float]:
+def checkpoint_file(spec: str) -> Path:
+    # RUN for its latest checkpoint, RUN@GAMES for a particular one
+    run, _, games = spec.partition("@")
+    if games:
+        return RUNS_DIR / run / f"fly-{int(games):07d}.npz"
+    return sorted((RUNS_DIR / run).glob("fly-*.npz"))[-1]
+
+
+def evaluate(fly: Fly, games: int, seed: int, against: list[str] | None = None) -> dict[str, float]:
     if not games:
         return {}
     explore, fly.explore = fly.explore, 0.0
     try:
         opponents = {**baselines(seed), "untrained": fly.untrained()}
+        opponents = {k: v for k, v in opponents.items() if against is None or k in against}
         return {name: tally(play(fly, opponent, games, f"eval vs {name}"), fly)["win"] for name, opponent in opponents.items()}
     finally:
         fly.explore = explore

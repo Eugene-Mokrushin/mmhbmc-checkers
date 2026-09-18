@@ -13,8 +13,8 @@ class LIF:
     t_ref: float = 2.2e-3
     w_syn: float = 0.275e-3
     input_rate: float = 150.0
-    # PN->KC synapses relative to w_syn, tuned so game positions activate 5-10% of KCs
-    input_gain: float = 2.5
+    # PN->KC synapses relative to w_syn, tuned so every stage of a game activates ~7% of KCs
+    input_gain: float = 2.4
     # background input to MBONs, about 10 Hz at rest
     mbon_drive: float = 7.3e-3
 

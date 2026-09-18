@@ -6,7 +6,15 @@ from pathlib import Path
 
 from paths import ARTIFACTS_DIR
 
-PROGRESS_FILE = ARTIFACTS_DIR / "progress.txt"
+PROGRESS_DIR = ARTIFACTS_DIR / "progress"
+PROGRESS_FILE = PROGRESS_DIR / "latest.txt"
+RUN = ""
+
+
+def use(name: str) -> None:
+    # from here on this process writes to its own file, so parallel runs don't overwrite each other
+    global PROGRESS_FILE, RUN
+    PROGRESS_FILE, RUN = PROGRESS_DIR / f"{name}.txt", name
 
 
 def duration(seconds: float | None) -> str:
@@ -45,7 +53,7 @@ class Progress:
         bar = "#" * int(frac * 20)
         stats = " ".join(f"{k}={v:.3g}" if isinstance(v, float) else f"{k}={v}" for k, v in self.stats.items())
         parts = [
-            f"{self.label} [{bar:<20}] {self.done:,}/{self.total:,} {frac:.1%}",
+            f"{RUN + ': ' if RUN else ''}{self.label} [{bar:<20}] {self.done:,}/{self.total:,} {frac:.1%}",
             f"{duration(elapsed)} elapsed, {duration(left)} left",
             stats,
             datetime.now().strftime("%H:%M:%S"),

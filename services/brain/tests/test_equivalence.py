@@ -5,6 +5,7 @@ import torch
 
 from connectome.extract import extract
 from connectome.load import NPZ_PATH, load
+from flycore.encode import N_LINES
 from sim import reference
 from sim.fast import FastLIF
 from sim.inputs import poisson, projection, random_lines
@@ -26,7 +27,7 @@ def test_random_network():
     counts = rng.integers(1, 40, (n, n)) * (rng.random((n, n)) < 0.1)
     sign = np.where(rng.random((n, 1)) < 0.7, 1.0, -1.0)
     weights = sp.csr_array(sign * counts)
-    proj = sp.csr_array(rng.integers(0, 60, (128, n)) * (rng.random((128, n)) < 0.05))
+    proj = sp.csr_array(rng.integers(0, 60, (N_LINES, n)) * (rng.random((N_LINES, n)) < 0.05))
     inputs = poisson(random_lines(1, 24, rng), 500, P.input_rate, P.dt, rng)[:, 0]
     same_raster(weights, proj, inputs)
 
