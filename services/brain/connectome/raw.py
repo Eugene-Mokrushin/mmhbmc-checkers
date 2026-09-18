@@ -1,13 +1,10 @@
 import hashlib
-import os
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-REPO = Path(__file__).resolve().parents[3]
-DATA_DIR = Path(os.environ.get("FLY_DATA_DIR", REPO / "data"))
-RAW_DIR = DATA_DIR / "raw"
+from paths import RAW_DIR
 
 CLASSIFICATION = "classification.csv.gz"
 CELL_TYPES = "consolidated_cell_types.csv.gz"

@@ -5,7 +5,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from connectome.graph import ANNOTATIONS, Connectome
-from connectome.raw import DATA_DIR
+from paths import DATA_DIR
 
 NPZ_PATH = DATA_DIR / "connectome.npz"
 FORMAT = 1

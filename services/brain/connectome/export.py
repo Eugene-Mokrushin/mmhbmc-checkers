@@ -1,6 +1,4 @@
 import json
-import os
-from pathlib import Path
 
 import pandas as pd
 
@@ -8,8 +6,8 @@ from connectome import raw
 from connectome.coordinates import one_per_neuron, read_markers
 from connectome.extract import MushroomBody, extract
 from connectome.load import load
+from paths import ARTIFACTS_DIR
 
-ARTIFACTS_DIR = Path(os.environ.get("FLY_ARTIFACTS_DIR", raw.REPO / "artifacts"))
 NEURONS_JSON = ARTIFACTS_DIR / "neurons.json"
 
 

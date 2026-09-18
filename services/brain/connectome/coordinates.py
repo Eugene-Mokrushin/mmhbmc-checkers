@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from connectome.raw import RAW_DIR
+from paths import RAW_DIR
 
 COORDINATES = "coordinates.csv.gz"
 
