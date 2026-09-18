@@ -1,6 +1,7 @@
 [tool.pytest.ini_options]
 testpaths = ["packages/flycore/tests", "services/brain/tests"]
 pythonpath = ["services/brain"]
+filterwarnings = ["ignore:.*parseAll.*:DeprecationWarning:brian2"]
 markers = [
     "slow: deep perft and full-connectome builds",
     "data: needs the FlyWire CSVs in data/raw/",
