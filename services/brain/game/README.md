@@ -1,7 +1,7 @@
 # Playing
 
 `game/fly.py` scores the board each legal move leaves behind: approach MBON
-spikes minus avoid MBON spikes over 100 ms, ties broken at random. Valence comes
+spikes minus avoid MBON spikes over 50 ms, ties broken at random. Valence comes
 from compartments (Aso et al. 2014): MBONs mostly contacted by reward (PAM)
 DANs drive avoidance, those contacted by punishment (PPL1) DANs drive approach.
 That gives 23 approach and 25 avoid MBONs.
