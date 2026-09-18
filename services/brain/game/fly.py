@@ -6,9 +6,10 @@ import torch
 
 from connectome.extract import extract
 from connectome.graph import Connectome
+from flycore.board import Move
 from flycore.encode import N_LINES
 from game.decode import score, valence
-from game.players import Player
+from game.players import Player, candidates
 from sim.fast import FastLIF
 from sim.inputs import background, board_lines, normalization, projection, regular
 from sim.params import LIF
@@ -53,3 +54,10 @@ class Fly(Player):
 
     def scores(self, after):
         return score(self.counts(after), self.mb, self.valence).tolist()
+
+    def choose_recorded(self, positions) -> tuple[list[Move], np.ndarray]:
+        options, after = candidates(positions)
+        counts = self.counts(after)
+        picks = self.pick(options, score(counts, self.mb, self.valence))
+        flat = [m for moves in options for m in moves]
+        return [flat[i] for i in picks], counts[picks]

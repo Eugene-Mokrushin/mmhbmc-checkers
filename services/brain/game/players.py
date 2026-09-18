@@ -4,22 +4,32 @@ from flycore.board import Move, Position, apply_move, flip
 from flycore.moves import legal_moves
 
 
-class Player:
-    def __init__(self, seed: int = 0):
-        self.rng = np.random.default_rng(seed)
+def candidates(positions: list[Position]) -> tuple[list[list[Move]], list[Position]]:
+    # the board each legal move leaves behind, seen from the mover's side
+    options = [legal_moves(pos) for pos in positions]
+    return options, [flip(apply_move(pos, m)) for pos, moves in zip(positions, options) for m in moves]
 
-    def choose_many(self, positions: list[Position]) -> list[Move]:
-        options = [legal_moves(pos) for pos in positions]
-        results = self.scores([flip(apply_move(pos, m)) for pos, moves in zip(positions, options) for m in moves])
-        picks, i = [], 0
+
+class Player:
+    def __init__(self, seed: int = 0, explore: float = 0.0):
+        self.rng = np.random.default_rng(seed)
+        self.explore = explore
+
+    def pick(self, options: list[list[Move]], scores) -> list[int]:
+        picks, start = [], 0
         for moves in options:
-            s = np.asarray(results[i : i + len(moves)])
-            i += len(moves)
-            picks.append(moves[self.rng.choice(np.flatnonzero(s == s.max()))])
+            s = np.asarray(scores[start : start + len(moves)])
+            best = np.flatnonzero(s == s.max()) if self.rng.random() >= self.explore else np.arange(len(moves))
+            picks.append(start + int(self.rng.choice(best)))
+            start += len(moves)
         return picks
 
+    def choose_many(self, positions: list[Position]) -> list[Move]:
+        options, after = candidates(positions)
+        flat = [m for moves in options for m in moves]
+        return [flat[i] for i in self.pick(options, self.scores(after))]
+
     def scores(self, after: list[Position]) -> list[float]:
-        # each position is the board a move leaves behind, seen from the mover's side
         raise NotImplementedError
 
 
