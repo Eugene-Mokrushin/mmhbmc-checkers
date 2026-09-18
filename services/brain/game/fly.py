@@ -29,13 +29,19 @@ class Fly(Player):
         self.wire(self.mb.graph.weights(), p)
 
     def wire(self, weights: sp.csr_array, p: LIF) -> None:
+        self.wiring = weights
         self.sim = FastLIF(weights, self.projection, p, bias=background(self.mb, p))
         self.rest = self.sim.settle(SETTLE)
 
     def with_weights(self, weights: sp.csr_array) -> "Fly":
         other = copy.copy(self)
+        other.rng = self.rng.spawn(1)[0]
         other.wire(weights, self.sim.p)
         return other
+
+    def untrained(self) -> "Fly":
+        # plasticity edits the simulator's weights, never the wiring the fly started with
+        return self.with_weights(self.wiring)
 
     def inputs(self, positions) -> tuple[torch.Tensor, np.ndarray]:
         lines = board_lines(positions)

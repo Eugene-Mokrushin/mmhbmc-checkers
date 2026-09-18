@@ -9,7 +9,7 @@ from scipy import stats
 from connectome.controls import CONTROLS
 from train.evaluate import RUNS_DIR
 
-OPPONENTS = ("random", "greedy", "minimax2")
+OPPONENTS = ("random", "greedy", "minimax2", "untrained")
 
 
 def load_runs(pattern: str, runs_dir: Path = RUNS_DIR) -> list[dict]:
@@ -23,6 +23,7 @@ def load_runs(pattern: str, runs_dir: Path = RUNS_DIR) -> list[dict]:
 
 
 def compare(runs: list[dict], opponent: str) -> list[dict]:
+    runs = [r for r in runs if r["first"].get(opponent) and r["last"].get(opponent)]
     gain = {c: np.array([float(r["last"][opponent]) - float(r["first"][opponent]) for r in runs if r["control"] == c]) for c in CONTROLS}
     final = {c: np.array([float(r["last"][opponent]) for r in runs if r["control"] == c]) for c in CONTROLS}
     out = []

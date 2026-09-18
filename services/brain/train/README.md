@@ -30,9 +30,13 @@ replies, the reward is the material won or lost (`shaped`), or nothing until
 the end (`terminal`). A win is +3, a loss -3.
 
 Every `--eval-every` games it saves the weights and plays the frozen fly
-against random, greedy and minimax (depth 2). Results go to
-`artifacts/runs/NAME/log.csv`, checkpoints to `artifacts/runs/NAME/fly-*.npz`,
-and the live status to `artifacts/progress.txt`.
+against random, greedy, minimax (depth 2) and its own untrained self. Results
+go to `artifacts/runs/NAME/log.csv`, checkpoints to
+`artifacts/runs/NAME/fly-*.npz`, and the live status to `artifacts/progress.txt`.
+
+Those in-run evaluations use 100 games, so each point is only good to about
+±10 points. `python -m train.curve --run NAME --games 300` replays every
+checkpoint afterwards for a cleaner learning curve.
 
 ## Controls
 

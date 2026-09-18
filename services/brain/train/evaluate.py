@@ -13,7 +13,7 @@ from paths import ARTIFACTS_DIR
 from train.plasticity import Plasticity
 
 RUNS_DIR = ARTIFACTS_DIR / "runs"
-COLUMNS = ["minutes", "games", "random", "greedy", "minimax2", "train_win", "kc_active", "mbon_hz", "depressed"]
+COLUMNS = ["minutes", "games", "random", "greedy", "minimax2", "untrained", "train_win", "kc_active", "mbon_hz", "depressed"]
 
 
 def baselines(seed: int) -> dict:
@@ -25,7 +25,8 @@ def evaluate(fly: Fly, games: int, seed: int) -> dict[str, float]:
         return {}
     explore, fly.explore = fly.explore, 0.0
     try:
-        return {name: tally(play(fly, opponent, games, f"eval vs {name}"), fly)["win"] for name, opponent in baselines(seed).items()}
+        opponents = {**baselines(seed), "untrained": fly.untrained()}
+        return {name: tally(play(fly, opponent, games, f"eval vs {name}"), fly)["win"] for name, opponent in opponents.items()}
     finally:
         fly.explore = explore
 
