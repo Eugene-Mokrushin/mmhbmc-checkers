@@ -46,9 +46,10 @@ def kc_contact(counts: sp.csr_array, idx: np.ndarray, kcs: np.ndarray) -> np.nda
 
 
 def extract(c: Connectome, side: str = "right") -> MushroomBody:
+    # side "both" takes the two mushroom bodies together
     kc = c.cell_class == "Kenyon_Cell"
-    own = np.flatnonzero(kc & (c.side == side))
-    other = np.flatnonzero(kc & (c.side != side))
+    own = np.flatnonzero(kc & ((c.side == side) | (side == "both")))
+    other = np.flatnonzero(kc & (c.side != side) & (side != "both"))
 
     parts = {"KC": own}
     for population, mask in candidates(c).items():

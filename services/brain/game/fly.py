@@ -20,9 +20,9 @@ CHUNK = 1024
 
 
 class Fly(Player):
-    def __init__(self, c: Connectome, p: LIF = LIF(), seed: int = 0):
+    def __init__(self, c: Connectome, p: LIF = LIF(), seed: int = 0, side: str = "right"):
         super().__init__(seed)
-        self.mb = extract(c)
+        self.mb = extract(c, side)
         self.projection = projection(c, self.mb, self.rng)
         self.phase = self.rng.integers(0, p.input_period, N_LINES)
         self.valence = valence(self.mb)

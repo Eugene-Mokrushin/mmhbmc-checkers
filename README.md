@@ -68,7 +68,10 @@ construction. With nine comparisons, p = 0.015 is suggestive rather than
 decisive, and every condition shares our designed input stage.
 
 Win/loss reward alone, without material won or lost after each move, made the
-fly worse (44% against random): credit reaches only the last few moves.
+fly worse (44% against random): credit reaches only the last few moves. A large
+win/loss dose credited to the whole game through a slow trace was worse still
+(73% to 32% against random): nearly every Kenyon cell fires at some point in a
+game, so the dose nudged almost every synapse the same way.
 
 ## Conventions
 

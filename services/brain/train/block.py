@@ -6,13 +6,14 @@ from game.fly import WINDOW, Fly
 from game.players import Player, material
 from train.plasticity import Plasticity
 
+WIN = 3.0
+
 def block(fly: Fly, plastic: Plasticity, opponent: Player, n: int, reward: str) -> dict:
     kc, mbon = fly.mb.members("KC"), fly.mb.members("MBON")
     games = [Game(fly, opponent) if i % 2 == 0 else Game(opponent, fly) for i in range(n)]
     rule = plastic.rule
     traces = np.zeros((n, len(kc)), dtype=np.float32)
-    slow = np.zeros((n, len(kc)), dtype=np.float32)
-    before, expected, dosed = np.zeros(n), np.zeros(n), np.zeros(n, dtype=bool)
+    before, expected = np.zeros(n), np.zeros(n)
     kc_active, mbon_spikes = [], []
     while not all(g.over for g in games):
         finish(games)
@@ -25,7 +26,6 @@ def block(fly: Fly, plastic: Plasticity, opponent: Player, n: int, reward: str) 
             scores = counts[:, mbon] @ fly.valence
             for j, i in enumerate(mine):
                 traces[i] = rule.decay * traces[i] + (1 - rule.decay) * active[j]
-                slow[i] = rule.game_decay * slow[i] + (1 - rule.game_decay) * active[j]
                 before[i], expected[i] = material(games[i].pos), scores[j]
                 games[i].moves.append(moves[j])
                 games[i].pos = apply_move(games[i].pos, moves[j])
@@ -33,20 +33,17 @@ def block(fly: Fly, plastic: Plasticity, opponent: Player, n: int, reward: str) 
         step(games, opponent)
         finish(games)
         if mine:
-            outcomes = np.array([outcome(games[i], before[i], reward) for i in mine])
+            outcomes = np.array([outcome(games[i], fly, before[i], reward) for i in mine])
             plastic.update(traces[mine], outcomes, expected[mine])
-        ended = [i for i, g in enumerate(games) if g.over and not dosed[i]]
-        if ended and rule.game_dose:
-            results = [0 if games[i].winner is None else 1 if games[i].winner is fly else -1 for i in ended]
-            plastic.game_over(slow[ended], np.array(results))
-        dosed[ended] = True
     wins = sum(g.winner is fly for g in games) / n
     return {"train_win": wins, "kc_active": float(np.mean(kc_active)), "mbon_hz": float(np.mean(mbon_spikes)) / (WINDOW * fly.sim.p.dt)}
 
 
-def outcome(game: Game, before: float, reward: str) -> float:
-    # the small dose after each exchange. shaped: material won or lost;
-    # balance: who is ahead, a piece worth a quarter; terminal: nothing
+def outcome(game: Game, fly: Fly, before: float, reward: str) -> float:
+    # shaped: material won or lost in the exchange; balance: who is ahead after it,
+    # a piece being worth a quarter of a win; terminal: nothing until the game ends
+    if game.over:
+        return 0.0 if game.winner is None else WIN if game.winner is fly else -WIN
     if reward == "shaped":
-        return material(game.pos) - before if not game.over else 0.0
-    return material(game.pos) / 4 if reward == "balance" and not game.over else 0.0
+        return material(game.pos) - before
+    return material(game.pos) / 4 if reward == "balance" else 0.0

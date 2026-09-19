@@ -35,3 +35,10 @@ def test_blocks(brain):
 def test_subgraph_needs_sorted_indices(brain):
     with pytest.raises(ValueError, match="ascending"):
         brain.subgraph(np.array([4, 0]))
+
+
+def test_both_mushroom_bodies_together(brain):
+    mb = extract(brain, "both")
+    assert types(mb, "MBON") == ["MBON01", "MBON07"]
+    assert types(mb, "DAN") == ["PAM01", "PAM02"]
+    assert mb.members("KC").tolist() == [0, 1, 2]

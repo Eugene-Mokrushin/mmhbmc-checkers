@@ -13,8 +13,6 @@ class Rule:
     decay: float = 0.6
     recovery: float = 0.003
     ceiling: float = 2.0
-    game_dose: float = 1.0
-    game_decay: float = 0.95
 
 
 class Plasticity:
@@ -32,7 +30,6 @@ class Plasticity:
         self.start = self.weights.clone()
         self.reward_share = torch.from_numpy(reward_share(fly.mb) if share is None else share).float()
         self.mean, self.spread = None, None
-        self.result = 0.0
 
     @property
     def weights(self) -> torch.Tensor:
@@ -54,14 +51,6 @@ class Plasticity:
 
     def update(self, eligibility: np.ndarray, outcome: np.ndarray, scores: np.ndarray) -> None:
         self.dose(eligibility, np.clip(outcome, -1, 1) - self.expect(scores))
-
-    def game_over(self, eligibility: np.ndarray, results: np.ndarray) -> None:
-        # a win (+1) or loss (-1) against the fly's running expectation of how its
-        # games go, credited to the whole game through the slow trace
-        results = np.asarray(results, dtype=np.float64)
-        self.dose(eligibility, self.rule.game_dose * (results - self.result))
-        for r in results:
-            self.result = 0.99 * self.result + 0.01 * r
 
     def dose(self, eligibility: np.ndarray, surprise: np.ndarray) -> None:
         e = torch.as_tensor(eligibility, dtype=torch.float32)
