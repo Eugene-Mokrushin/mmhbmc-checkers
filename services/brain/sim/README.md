@@ -47,3 +47,21 @@ silence, bitter alone leaves it silent, and bitter together with sugar cuts it
 by about 80%. With every connection down to a single synapse, sugar lights up
 12% of the brain and bitter no longer holds MN9 back, so the weakest
 connections stay out.
+
+## Eyes
+
+`sim/eye.py` shows the fly the board. Each playable square has a brightness for
+its state (empty, own man or king, opponent man or king) and the board fills
+the frontal field, each eye seeing its half. Every photoreceptor (R1-6, R7, R8;
+11,151 of them) fires steadily at a rate set by the brightness where it looks.
+Where it looks comes from the lamina's geometry for R1-6 (the retina isn't in
+the data) and, for R7 and R8, from the lamina and medulla neurons they share
+with them. Elevation is reliable; azimuth is only approximate until FlyWire's
+published column coordinates are used.
+
+`python -m sim.seeing` measures how much of the board each stage of the brain
+still carries: the best linear readout of material and safety from its spikes.
+Material survives from the eyes (0.99 AUC) to the Kenyon cells, MBONs and
+descending neurons (about 0.8). Safety, a pattern rather than a sum, is 0.67 at
+the eyes and gone by the Kenyon cells: only 176 of 2,597 right-side Kenyon
+cells receive visual input at all.
