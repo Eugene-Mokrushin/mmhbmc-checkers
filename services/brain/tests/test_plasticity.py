@@ -64,7 +64,7 @@ def test_state_round_trip(fly):
 
 def test_training_block_plays_to_the_end(fly, tmp_path, monkeypatch):
     monkeypatch.setattr(progress, "PROGRESS_FILE", tmp_path / "progress.txt")
-    stats = block(fly, Plasticity(fly), RandomPlayer(1), 2, shaped=True)
+    stats = block(fly, Plasticity(fly), RandomPlayer(1), 2, "balance")
     assert set(stats) == {"train_win", "kc_active", "mbon_hz"}
     assert 0 <= stats["train_win"] <= 1
 
@@ -75,3 +75,26 @@ def test_every_control_builds_a_working_learner(brain, control):
     assert fly.explore == 0.1
     assert plastic.weights.shape == (2, 1)
     plastic.update(np.array([[1, 0]]), np.array([1.0]), np.array([0.0]))
+
+
+def test_a_win_rewards_the_whole_game(fly):
+    plastic = Plasticity(fly, Rule(rate=0.5, recovery=0, game_dose=1.0))
+    start = plastic.weights.clone()
+    plastic.game_over(np.array([[1, 0]]), np.array([1]))
+    assert torch.allclose(plastic.weights[:, 0], start[:, 0] * torch.tensor([0.5, 1.0]))
+    assert plastic.result > 0
+
+
+def test_a_loss_punishes_the_whole_game(fly):
+    plastic = Plasticity(fly, Rule(rate=0.5, recovery=0, game_dose=1.0))
+    start = plastic.weights.clone()
+    plastic.game_over(np.array([[1, 0]]), np.array([-1]))
+    assert torch.allclose(plastic.weights[:, 0], start[:, 0] * torch.tensor([1.5, 1.0]))
+
+
+def test_an_expected_result_teaches_nothing(fly):
+    plastic = Plasticity(fly, Rule(rate=0.5, recovery=0, game_dose=1.0))
+    plastic.result = 1.0
+    start = plastic.weights.clone()
+    plastic.game_over(np.array([[1, 0]]), np.array([1]))
+    assert torch.equal(plastic.weights, start)

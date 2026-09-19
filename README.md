@@ -42,6 +42,34 @@ runs are named after `--run`). To follow every job at once:
 while true; do clear; cat artifacts/progress/*.txt; sleep 5; done
 ```
 
+## Results: version 1
+
+The plain fly (`artifacts/flies/plain.npz`, git tag `v1`) judges the board each
+legal move leaves and plays the best one; it doesn't look further ahead.
+Trained 4,096 games against a random player, then 2,048 against a greedy one,
+it wins 69% of games against random and 73% against greedy (300 games each).
+Minimax at depth 2 still beats it almost every time.
+
+Does the fly's own wiring matter? Ten seeds per condition, 1,024 training games
+each; gain is the improvement in win rate against random over each circuit's
+untrained start (Welch's t-test against the real wiring):
+
+| Mushroom body | Gain | p |
+| --- | --- | --- |
+| Real connectome | +9.7% ± 6.1 | |
+| Shuffled, every neuron's degrees kept | +7.2% ± 5.6 | 0.36 |
+| Random, same connection and synapse counts | +10.4% ± 7.2 | 0.82 |
+| Real, but MBONs get another MBON's dopamine neurons | +1.0% ± 8.1 | 0.015 |
+
+The specific wiring inside the mushroom body made no measurable difference;
+pairing reward dopamine with the avoid MBONs did. That pairing is also how
+approach and avoid are assigned here, so part of the effect is by
+construction. With nine comparisons, p = 0.015 is suggestive rather than
+decisive, and every condition shares our designed input stage.
+
+Win/loss reward alone, without material won or lost after each move, made the
+fly worse (44% against random): credit reaches only the last few moves.
+
 ## Conventions
 
 - Board positions are stored from the side to move, which always advances

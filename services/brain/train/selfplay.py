@@ -19,7 +19,7 @@ def main() -> None:
     parser.add_argument("--games", type=int, default=20000)
     parser.add_argument("--opponent", choices=OPPONENTS, default="random")
     parser.add_argument("--control", choices=CONTROLS, default="real")
-    parser.add_argument("--reward", choices=("shaped", "terminal"), default="shaped")
+    parser.add_argument("--reward", choices=("shaped", "balance", "terminal"), default="shaped")
     parser.add_argument("--init", help="start from a saved fly: RUN (latest checkpoint) or RUN@GAMES")
     parser.add_argument("--parallel", type=int, default=256)
     parser.add_argument("--eval-every", type=int, default=2048)
@@ -28,11 +28,13 @@ def main() -> None:
     parser.add_argument("--explore", type=float, default=0.05)
     parser.add_argument("--rate", type=float, default=0.1)
     parser.add_argument("--decay", type=float, default=Rule.decay)
+    parser.add_argument("--game-dose", type=float, default=Rule.game_dose, help="size of the win/loss dose, 0 for none")
+    parser.add_argument("--game-decay", type=float, default=Rule.game_decay)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
     progress.use(args.run)
-    fly, plastic = setup(args.control, args.seed, Rule(rate=args.rate, decay=args.decay), args.explore)
+    fly, plastic = setup(args.control, args.seed, Rule(rate=args.rate, decay=args.decay, game_dose=args.game_dose, game_decay=args.game_decay), args.explore)
     if args.init:
         with np.load(checkpoint_file(args.init)) as z:
             plastic.load(z["weights"])
@@ -48,7 +50,7 @@ def main() -> None:
     with Progress(args.games, "train") as bar:
         while done < args.games:
             n = min(args.parallel, args.games - done)
-            stats = block(fly, plastic, opponent, n, args.reward == "shaped")
+            stats = block(fly, plastic, opponent, n, args.reward)
             done += n
             bar.update(n, **stats)
             if done >= next_eval or done == args.games:
