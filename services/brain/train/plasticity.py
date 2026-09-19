@@ -25,19 +25,19 @@ class Plasticity:
     # Weights stay within [0, ceiling x start] and slowly drift back to the start.
     def __init__(self, fly: Fly, rule: Rule = Rule(), share: np.ndarray | None = None):
         self.fly, self.rule = fly, rule
-        self.kc = torch.from_numpy(fly.mb.members("KC"))[:, None]
-        self.mbon = torch.from_numpy(fly.mb.members("MBON"))
+        self.where = fly.sim.rows.locate(fly.mb.members("KC"), fly.mb.members("MBON"))
         self.start = self.weights.clone()
-        self.reward_share = torch.from_numpy(reward_share(fly.mb) if share is None else share).float()
+        share = reward_share(fly.mb) if share is None else share
+        self.reward_share = torch.from_numpy(np.asarray(share)).float().to(fly.sim.device)
         self.mean, self.spread = None, None
 
     @property
     def weights(self) -> torch.Tensor:
-        return self.fly.sim.w[self.kc, self.mbon]
+        return self.fly.sim.rows.read(self.where)
 
     def dopamine(self, surprise: np.ndarray) -> torch.Tensor:
         # per MBON: +surprise in a pure reward compartment, -surprise in a pure punishment one
-        s = torch.as_tensor(surprise, dtype=torch.float32)[:, None]
+        s = torch.as_tensor(surprise, dtype=torch.float32).to(self.reward_share.device)[:, None]
         return s * (2 * self.reward_share - 1)
 
     def expect(self, scores: np.ndarray) -> np.ndarray:
@@ -53,21 +53,19 @@ class Plasticity:
         self.dose(eligibility, np.clip(outcome, -1, 1) - self.expect(scores))
 
     def dose(self, eligibility: np.ndarray, surprise: np.ndarray) -> None:
-        e = torch.as_tensor(eligibility, dtype=torch.float32)
+        e = torch.as_tensor(eligibility, dtype=torch.float32).to(self.reward_share.device)
         drive = e.T @ self.dopamine(surprise) / len(e)
         w = (self.weights - self.rule.rate * drive * self.start).clamp(min=0)
         w = torch.minimum(w, self.rule.ceiling * self.start)
         w += self.rule.recovery * (self.start - w)
-        self.fly.sim.w[self.kc, self.mbon] = w
-        self.fly.sim.rewired()
+        self.fly.sim.rows.write(self.where, w)
 
     def depressed(self) -> float:
         existing = self.start > 0
         return float(((self.weights < 0.05 * self.start) & existing).sum() / existing.sum())
 
     def state(self) -> np.ndarray:
-        return self.weights.numpy().copy()
+        return self.weights.cpu().numpy().copy()
 
     def load(self, weights: np.ndarray) -> None:
-        self.fly.sim.w[self.kc, self.mbon] = torch.from_numpy(weights)
-        self.fly.sim.rewired()
+        self.fly.sim.rows.write(self.where, torch.from_numpy(weights))

@@ -32,3 +32,18 @@ Board input, in `sim/inputs.py`:
   their synapses that come from outside the mushroom body, which gives them a
   resting rate around 12 Hz. Every evaluation starts from a settled resting
   state rather than from silence.
+
+## Whole brain
+
+`FastLIF` keeps weights only as sparse rows and takes a `device`, so the same
+code runs all 139,255 neurons, on the CPU or a CUDA GPU (`best_device()`;
+Apple's GPU gives identical spikes but no speed-up). The whole brain uses
+connections of 5 or more synapses (3.7M).
+
+`python -m sim.feeding` is its validation gate, after Shiu et al. 2024: the
+sugar and bitter taste neurons are driven at 150 Hz and MN9, the motor neuron
+behind feeding, is watched. Sugar alone drives it at about 400 Hz from
+silence, bitter alone leaves it silent, and bitter together with sugar cuts it
+by about 80%. With every connection down to a single synapse, sugar lights up
+12% of the brain and bitter no longer holds MN9 back, so the weakest
+connections stay out.

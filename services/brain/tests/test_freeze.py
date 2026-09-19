@@ -4,7 +4,7 @@ import numpy as np
 
 from train import evaluate, freeze
 from train.controls import setup
-from train.plasticity import Rule
+from train.plasticity import Plasticity, Rule
 
 
 def write_log(root, run, rows):
@@ -30,6 +30,5 @@ def test_frozen_fly_loads_back(brain, tmp_path, monkeypatch):
     np.savez(tmp_path / "plain.npz", weights=plastic.state())
     (tmp_path / "plain.json").write_text(json.dumps({"control": "real", "seed": 3}))
     fly = freeze.load_fly("plain", c=brain)
-    loaded = fly.sim.w[plastic.kc, plastic.mbon].numpy()
-    assert np.array_equal(loaded, plastic.state())
+    assert np.array_equal(Plasticity(fly).state(), plastic.state())
     assert fly.explore == 0.0
