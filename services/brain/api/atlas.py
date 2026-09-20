@@ -3,7 +3,7 @@ import pandas as pd
 
 from paths import DATA_DIR
 
-SPAN = 32000
+SPAN = 32000  # a whole brain half-width, comfortably inside a 16-bit number
 MESH = DATA_DIR / "flywire_brain.ply"
 
 
@@ -16,7 +16,9 @@ def frame(points: pd.DataFrame) -> tuple[np.ndarray, float]:
 
 
 def scaled(xyz: np.ndarray, middle: np.ndarray, spread: float) -> np.ndarray:
-    return np.nan_to_num((xyz - middle) / spread, nan=0.0) * SPAN
+    # 16-bit numbers wrap around past 32767, which would throw a vertex to the far side
+    # of the brain, so anything beyond the frame is held at its edge
+    return np.clip(np.nan_to_num((xyz - middle) / spread, nan=0.0), -1.02, 1.02) * SPAN
 
 
 def atlas(root_id: np.ndarray, points: pd.DataFrame, middle: np.ndarray, spread: float) -> bytes:
@@ -37,4 +39,9 @@ def surface(middle: np.ndarray, spread: float) -> bytes:
     xyz = np.frombuffer(body, dtype="<f4", count=vertices * 3).reshape(-1, 3)
     rest = np.frombuffer(body, dtype=np.uint8, offset=vertices * 12)
     corners = rest.reshape(faces, 13)[:, 1:].copy().view("<u4")
-    return np.uint32([vertices, faces]).tobytes() + scaled(xyz, middle, spread).astype("<i2").tobytes() + corners.astype("<u4").tobytes()
+    # a handful of triangles in the published mesh stretch right across the brain;
+    # they show up as streaks, so they go
+    put = scaled(xyz, middle, spread)
+    sides = np.linalg.norm(put[corners[:, 0]] - put[corners[:, 1]], axis=1)
+    corners = corners[sides < 0.1 * SPAN]
+    return np.uint32([vertices, len(corners)]).tobytes() + put.astype("<i2").tobytes() + corners.astype("<u4").tobytes()
