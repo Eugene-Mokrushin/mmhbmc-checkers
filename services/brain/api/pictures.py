@@ -48,7 +48,8 @@ def pictures(app: FastAPI, flies):
             raise HTTPException(404, f"no fly called {fly}")
         if fly not in held["atlas"]:
             points, middle, spread = await anatomy()
-            made = await asyncio.to_thread(atlas, stable.flies[fly].root_id, points, middle, spread, held["drawn"], held["inside"])
+            known = stable.flies[fly]
+            made = await asyncio.to_thread(atlas, known.root_id, points, middle, spread, held["drawn"], held["inside"], known.quiet)
             held["atlas"][fly] = made
         return Response(held["atlas"][fly], media_type="application/octet-stream", headers=keep(held["atlas"][fly]))
 

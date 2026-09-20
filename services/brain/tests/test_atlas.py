@@ -15,9 +15,9 @@ def store(path, roots, counts, xyz):
 
 
 def read(blob: bytes):
-    neurons, points = np.frombuffer(blob, dtype="<u4", count=2)
-    spans = np.frombuffer(blob, dtype="<u2", offset=8, count=neurons)
-    xyz = np.frombuffer(blob, dtype="<i2", offset=8 + neurons * 2, count=points * 3).reshape(-1, 3)
+    neurons, points, quiet = np.frombuffer(blob, dtype="<u4", count=3)
+    spans = np.frombuffer(blob, dtype="<u2", offset=12, count=neurons)
+    xyz = np.frombuffer(blob, dtype="<i2", offset=12 + neurons * 2, count=(points + quiet) * 3).reshape(-1, 3)
     return spans, xyz
 
 
@@ -66,3 +66,13 @@ def test_what_both_sides_have_is_kept():
     ball = ball / np.linalg.norm(ball, axis=1, keepdims=True) * rng.uniform(0, 1, (60000, 1)) ** (1 / 3) * 100
     inside = Envelope(ball)
     assert inside.holds(ball).mean() > 0.93
+
+
+def test_the_half_that_is_not_simulated_is_drawn_behind_it(tmp_path):
+    roots, others = [10, 20], [30, 40]
+    drawn = store(tmp_path / "s.npz", roots + others, [2, 2, 2, 2], np.zeros((8, 3)))
+    points = markers(roots + others)
+    middle, spread = frame(points)
+    spans, xyz = read(atlas(np.array(roots), points, middle, spread, drawn, None, np.array(others)))
+    assert list(spans) == [2, 2]  # only the fly's own neurons can fire
+    assert len(xyz) == 8  # but the other half is there to look at

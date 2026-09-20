@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import torch
 
+from connectome.extract import extract
 from connectome.load import load
 from flycore.board import Move, Position
 from game.imagine import Centered, Imagination
@@ -27,6 +28,7 @@ class Stabled:
     device: str
     root_id: np.ndarray  # the neurons its simulator holds, in its own order
     depths: list[int]  # how far ahead it may be asked to think, where that helps it
+    quiet: np.ndarray  # neurons drawn but not simulated: the other half of a half a fly uses
     watcher: Watcher | None = field(default=None)
 
     def thinking(self, depth: int) -> Player:
@@ -49,6 +51,12 @@ def spoken(move: Move) -> dict:
     return {"origin": move.origin, "destination": move.destination, "captured": move.captured, "path": list(move.path), "promotes": move.promotes}
 
 
+def mirrored(c, mb):
+    # a fly made of one mushroom body is drawn with the other one behind it, quietly
+    other = "left" if mb.side == "right" else "right"
+    return extract(c, other).graph.root_id
+
+
 def devices() -> list[str]:
     return [f"cuda:{i}" for i in range(torch.cuda.device_count())] or ["cpu"]
 
@@ -67,7 +75,7 @@ class Stable:
             mb = getattr(player, "mb", None)
             root_id = mb.graph.root_id if mb is not None and player.sim.n == mb.graph.n else c.root_id
             meta = json.loads((FLIES_DIR / f"{name}.json").read_text())
-            self.flies[name] = Stabled(name, player, Centered(player, exam(TYPICAL, seed=3)[0]), device, root_id, meta.get("depths", [1]))
+            self.flies[name] = Stabled(name, player, Centered(player, exam(TYPICAL, seed=3)[0]), device, root_id, meta.get("depths", [1]), mirrored(c, mb) if mb is not None and player.sim.n == mb.graph.n else np.zeros(0, dtype=np.int64))
 
     def choose(self, name: str, depth: int, position: Position) -> tuple[Move | None, float, "torch.Tensor | None"]:
         # every legal move is judged in one pass, which also records what fired for each

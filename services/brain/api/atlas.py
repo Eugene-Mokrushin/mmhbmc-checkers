@@ -67,9 +67,13 @@ def spread_out(root_id: np.ndarray, points: pd.DataFrame, drawn: "Drawings | Non
     return (np.concatenate(out) if out else marks[:0]), counts
 
 
-def atlas(root_id: np.ndarray, points: pd.DataFrame, middle: np.ndarray, spread: float, drawn: "Drawings | None" = None, inside: "Envelope | None" = None, budget: int = BUDGET) -> bytes:
-    # where each of a fly's neurons runs, in the order its simulator numbers them, so a
-    # spike can be drawn along the cell that made it
+def atlas(root_id: np.ndarray, points: pd.DataFrame, middle: np.ndarray, spread: float, drawn: "Drawings | None" = None, inside: "Envelope | None" = None, quiet: np.ndarray | None = None, budget: int = BUDGET) -> bytes:
+    # Where each of a fly's neurons runs, in the order its simulator numbers them, so a
+    # spike can be drawn along the cell that made it. A fly built from one half of a
+    # structure is drawn with the other half behind it, which never fires: the picture is
+    # then the shape the animal has, and the firing is still only what was simulated.
     xyz, counts = spread_out(root_id, points, drawn, inside, budget)
-    head = np.uint32([len(root_id), len(xyz)]).tobytes()
-    return head + counts.astype("<u2").tobytes() + scaled(xyz, middle, spread).astype("<i2").tobytes()
+    still = spread_out(quiet, points, drawn, inside, budget)[0] if quiet is not None and len(quiet) else xyz[:0]
+    head = np.uint32([len(root_id), len(xyz), len(still)]).tobytes()
+    places = scaled(np.concatenate([xyz, still]) if len(still) else xyz, middle, spread)
+    return head + counts.astype("<u2").tobytes() + places.astype("<i2").tobytes()
