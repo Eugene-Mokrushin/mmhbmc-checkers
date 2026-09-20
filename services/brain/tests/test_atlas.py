@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from api.atlas import SPAN, Drawings, atlas, frame
+from api.atlas import SPAN, Drawings, Envelope, atlas, frame
 
 
 def markers(roots) -> pd.DataFrame:
@@ -47,3 +47,21 @@ def test_without_any_skeletons_every_neuron_is_its_marker():
     spans, xyz = read(atlas(np.array(roots), points, middle, spread, None))
     assert list(spans) == [1, 1, 1]
     assert abs(xyz[:, 0]).max() <= 1.02 * SPAN
+
+
+def test_a_side_the_knife_spared_is_cut_back_to_the_other():
+    # a brain with a fringe on the left that has no counterpart on the right
+    rng = np.random.default_rng(0)
+    core = rng.uniform(-1, 1, (60000, 3)) * [100.0, 60.0, 60.0]
+    fringe = rng.uniform(-1, 1, (3000, 3)) * [10.0, 60.0, 60.0] - [150.0, 0.0, 0.0]
+    inside = Envelope(np.concatenate([core, fringe]))
+    assert inside.holds(core).mean() > 0.9
+    assert inside.holds(fringe).mean() < 0.01
+
+
+def test_what_both_sides_have_is_kept():
+    rng = np.random.default_rng(1)
+    ball = rng.normal(0, 1, (60000, 3))
+    ball = ball / np.linalg.norm(ball, axis=1, keepdims=True) * rng.uniform(0, 1, (60000, 1)) ** (1 / 3) * 100
+    inside = Envelope(ball)
+    assert inside.holds(ball).mean() > 0.93

@@ -3,7 +3,7 @@ import hashlib
 
 from fastapi import FastAPI, HTTPException, Response
 
-from api.atlas import SKELETONS, Drawings, atlas, frame
+from api.atlas import SKELETONS, Drawings, Envelope, atlas, frame
 from connectome.coordinates import one_per_neuron, read_markers
 
 
@@ -15,7 +15,7 @@ def keep(blob: bytes) -> dict:
 def pictures(app: FastAPI, flies) -> None:
     # what the website needs to draw a brain: the places each of a fly's neurons runs
     # through. It is the same for every game, so it is worked out once and kept.
-    held: dict = {"points": None, "frame": None, "drawn": None, "atlas": {}}
+    held: dict = {"points": None, "frame": None, "drawn": None, "inside": None, "atlas": {}}
 
     async def anatomy():
         if held["points"] is None:
@@ -23,6 +23,8 @@ def pictures(app: FastAPI, flies) -> None:
             held["frame"] = await asyncio.to_thread(frame, held["points"])
             if SKELETONS.exists():
                 held["drawn"] = await asyncio.to_thread(Drawings)
+            places = held["drawn"].xyz if held["drawn"] is not None else held["points"].to_numpy(dtype=float)
+            held["inside"] = await asyncio.to_thread(Envelope, places)
         return held["points"], *held["frame"]
 
     @app.get("/atlas/{fly}")
@@ -32,6 +34,6 @@ def pictures(app: FastAPI, flies) -> None:
             raise HTTPException(404, f"no fly called {fly}")
         if fly not in held["atlas"]:
             points, middle, spread = await anatomy()
-            made = await asyncio.to_thread(atlas, stable.flies[fly].root_id, points, middle, spread, held["drawn"])
+            made = await asyncio.to_thread(atlas, stable.flies[fly].root_id, points, middle, spread, held["drawn"], held["inside"])
             held["atlas"][fly] = made
         return Response(held["atlas"][fly], media_type="application/octet-stream", headers=keep(held["atlas"][fly]))
