@@ -7,7 +7,7 @@ from connectome.controls import CONTROLS
 from game.arena import OPPONENTS
 from progress import Progress
 from train.block import block
-from train.controls import setup
+from train.controls import BRAINS, setup
 from train.evaluate import Run, checkpoint_file, evaluate
 from train.plasticity import Rule
 from train.skills import skills
@@ -18,6 +18,7 @@ def main() -> None:
     parser.add_argument("--run", default="shaped-random")
     parser.add_argument("--games", type=int, default=20000)
     parser.add_argument("--opponent", choices=OPPONENTS, default="random")
+    parser.add_argument("--brain", choices=BRAINS, default="mb")
     parser.add_argument("--control", choices=CONTROLS, default="real")
     parser.add_argument("--reward", choices=("shaped", "balance", "terminal"), default="shaped")
     parser.add_argument("--init", help="start from a saved fly: RUN (latest checkpoint) or RUN@GAMES")
@@ -32,7 +33,7 @@ def main() -> None:
     args = parser.parse_args()
 
     progress.use(args.run)
-    fly, plastic = setup(args.control, args.seed, Rule(rate=args.rate, decay=args.decay), args.explore)
+    fly, plastic = setup(args.control, args.seed, Rule(rate=args.rate, decay=args.decay), args.explore, brain=args.brain)
     if args.init:
         with np.load(checkpoint_file(args.init)) as z:
             plastic.load(z["weights"])

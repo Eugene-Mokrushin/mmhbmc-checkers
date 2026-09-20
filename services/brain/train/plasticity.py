@@ -25,7 +25,7 @@ class Plasticity:
     # Weights stay within [0, ceiling x start] and slowly drift back to the start.
     def __init__(self, fly: Fly, rule: Rule = Rule(), share: np.ndarray | None = None):
         self.fly, self.rule = fly, rule
-        self.where = fly.sim.rows.locate(fly.mb.members("KC"), fly.mb.members("MBON"))
+        self.where = fly.sim.rows.locate(fly.kcs, fly.mbons)
         self.start = self.weights.clone()
         share = reward_share(fly.mb) if share is None else share
         self.reward_share = torch.from_numpy(np.asarray(share)).float().to(fly.sim.device)

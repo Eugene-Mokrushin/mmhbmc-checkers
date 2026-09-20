@@ -59,7 +59,8 @@ class Rows:
         return torch.where(where >= 0, self.data[where.clamp(min=0)], 0.0)
 
     def write(self, where: torch.Tensor, values: torch.Tensor) -> None:
-        self.data[where[where >= 0]] = values[where >= 0].to(self.data.dtype)
+        values = values.to(self.data.device, self.data.dtype)
+        self.data[where[where >= 0]] = values[where >= 0]
 
 
 def integrate(v, x, last, t, rest, decay_v: float, decay_x: float, x_to_v: float, v_reset: float, v_th: float, ref_steps: int):

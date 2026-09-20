@@ -65,3 +65,15 @@ Material survives from the eyes (0.99 AUC) to the Kenyon cells, MBONs and
 descending neurons (about 0.8). Safety, a pattern rather than a sum, is 0.67 at
 the eyes and gone by the Kenyon cells: only 176 of 2,597 right-side Kenyon
 cells receive visual input at all.
+
+## Learning every connection
+
+`sim/grad.py` makes the whole brain differentiable for version 2's gradient
+variant. Same neurons, same equations and, tested, the same spikes as
+`FastLIF`, but in 0.5 ms steps instead of 0.1 ms: Kenyon cells and descending
+neurons first respond at the same moments (about 19.5 and 29 ms after the board
+appears) and about as many neurons fire. Every connection keeps its sign and
+synapse count, times a learned factor that starts at 1. Spikes stay
+all-or-nothing going forward; going back, the gradient passes through a smooth
+stand-in for the threshold (surrogate gradients, Zenke & Ganguli 2018). The
+window is recomputed in 25-step segments during the backward pass to save memory.

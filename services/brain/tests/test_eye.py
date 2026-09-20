@@ -1,7 +1,8 @@
 import numpy as np
 
 from flycore.board import INITIAL
-from sim.eye import EMPTY, LIGHT, MAX_RATE, SHADES, image, rank, rhythm, sample
+from sim.eye import EMPTY, LIGHT, MAX_RATE, SHADES, Rhythm, image, projection, sample
+from sim.retina import rank
 
 
 def test_board_image_shades_each_square():
@@ -19,9 +20,17 @@ def test_each_eye_sees_its_half_of_the_board():
 
 
 def test_rhythm_fires_at_each_lines_rate():
-    spikes = rhythm(np.array([[MAX_RATE, 10.0, 0.0]]), steps=10_000, dt=1e-4, phase=np.zeros(3))
-    assert spikes.shape == (10_000, 1, 3)
-    assert spikes[:, 0].sum(axis=0).tolist() == [150, 10, 0]
+    rhythm = Rhythm(np.array([[MAX_RATE, 10.0, 0.0]]), steps=10_000, dt=1e-4, phase=np.full(3, 0.5))
+    assert rhythm.shape == (10_000, 1, 3)
+    fired = sum(rhythm[t][0].int() for t in range(10_000))
+    assert fired.tolist() == [150, 10, 0]
+
+
+def test_each_photoreceptor_gets_its_own_input_line():
+    p = projection(np.array([4, 1]), n=6)
+    assert p.shape == (2, 6)
+    rows, cols = p.toarray().nonzero()
+    assert rows.tolist() == [0, 1] and cols.tolist() == [4, 1]
 
 
 def test_rank_spreads_values_over_zero_to_one():

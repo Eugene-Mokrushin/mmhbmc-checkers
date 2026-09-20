@@ -15,6 +15,3 @@ def valence(mb: MushroomBody) -> np.ndarray:
     # MBONs in punishment compartments drive approach.
     return np.where(reward_share(mb) > 0.5, -1, 1)
 
-
-def score(counts: np.ndarray, mb: MushroomBody, signs: np.ndarray) -> np.ndarray:
-    return counts[:, mb.members("MBON")] @ signs

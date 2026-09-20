@@ -36,7 +36,7 @@ def main() -> None:
     plastic = Plasticity(fly, Rule(rate=args.rate, decay=0.0, recovery=args.recovery))
     train, train_labels = labelled(args.train, seed=1)
     test, test_labels = labelled(args.test, seed=2)
-    kc, mbon = fly.mb.members("KC"), fly.mb.members("MBON")
+    kc, mbon = fly.kc_cols, fly.mbon_cols
 
     print(f"before: AUC {evaluate(fly, test, test_labels):.3f} (0.5 = chance, 1.0 = perfect)")
     with Progress(args.epochs * len(train), "sanity: material") as bar:

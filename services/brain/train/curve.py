@@ -16,7 +16,7 @@ OPPONENTS = ("random", "greedy", "untrained")
 
 def restore(run: str, games: int, c=None) -> tuple[Fly, Plasticity]:
     config = json.loads((RUNS_DIR / run / "config.json").read_text())
-    fly, plastic = setup(config.get("control", "real"), config["seed"], Rule(), explore=0.0, c=c)
+    fly, plastic = setup(config.get("control", "real"), config["seed"], Rule(), 0.0, c, config.get("brain", "mb"))
     with np.load(RUNS_DIR / run / f"fly-{games:07d}.npz") as z:
         plastic.load(z["weights"])
     return fly, plastic

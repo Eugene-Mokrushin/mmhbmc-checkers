@@ -8,7 +8,7 @@ from connectome.extract import extract
 from connectome.graph import Connectome
 from flycore.board import Move
 from flycore.encode import N_LINES
-from game.decode import score, valence
+from game.decode import valence
 from game.players import Player, candidates
 from sim.fast import FastLIF
 from sim.inputs import background, board_lines, projection, regular
@@ -20,6 +20,8 @@ CHUNK = 1024
 
 
 class Fly(Player):
+    window = WINDOW
+
     def __init__(self, c: Connectome, p: LIF = LIF(), seed: int = 0, side: str = "right"):
         super().__init__(seed)
         self.mb = extract(c, side)
@@ -38,6 +40,17 @@ class Fly(Player):
         other.rng = self.rng.spawn(1)[0]
         other.wire(weights, self.sim.p)
         return other
+
+    @property
+    def kcs(self) -> np.ndarray:
+        # KC and MBON indices in the simulator (where plasticity acts) and as columns of counts()
+        return self.mb.members("KC")
+
+    @property
+    def mbons(self) -> np.ndarray:
+        return self.mb.members("MBON")
+
+    kc_cols, mbon_cols = kcs, mbons
 
     def untrained(self) -> "Fly":
         # plasticity edits the simulator's weights, never the wiring the fly started with
@@ -58,12 +71,16 @@ class Fly(Player):
     def raster(self, position) -> np.ndarray:
         return self.sim.raster(self.inputs([position]), self.rest)[:, 0].numpy()
 
+    def judge(self, counts: np.ndarray) -> np.ndarray:
+        # approach MBON spikes minus avoid MBON spikes
+        return counts[:, self.mbon_cols] @ self.valence
+
     def scores(self, after):
-        return score(self.counts(after), self.mb, self.valence).tolist()
+        return self.judge(self.counts(after)).tolist()
 
     def choose_recorded(self, positions) -> tuple[list[Move], np.ndarray]:
         options, after = candidates(positions)
         counts = self.counts(after)
-        picks = self.pick(options, score(counts, self.mb, self.valence))
+        picks = self.pick(options, self.judge(counts))
         flat = [m for moves in options for m in moves]
         return [flat[i] for i in picks], counts[picks]

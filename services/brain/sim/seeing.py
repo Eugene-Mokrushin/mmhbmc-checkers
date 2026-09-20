@@ -1,21 +1,20 @@
 import argparse
 
 import numpy as np
-import scipy.sparse as sp
-import torch
 
 import progress
 from connectome.coordinates import one_per_neuron, read_markers
 from connectome.extract import extract
 from connectome.load import load
 from progress import Progress
-from sim.eye import KICK, field, rates, rhythm
+from sim.eye import Rhythm, projection, rates
 from sim.fast import FastLIF
 from sim.kernels import best_device
 from sim.params import LIF
+from sim.retina import field
 from train.skills import auc, exam
 
-CHUNK = 16
+CHUNK = 64
 
 
 def stages(c, mb) -> dict[str, np.ndarray]:
@@ -51,8 +50,7 @@ def main() -> None:
     progress.use("seeing")
     c = load(min_syn=5)
     receptors, where = field(c, one_per_neuron(read_markers()))
-    projection = sp.csr_array((np.full(len(receptors), KICK), (np.arange(len(receptors)), receptors)), shape=(len(receptors), c.n))
-    sim = FastLIF(c.weights(), projection, LIF(input_gain=1.0), device=best_device())
+    sim = FastLIF(c.weights(), projection(receptors, c.n), LIF(input_gain=1.0), device=best_device())
     groups = stages(c, extract(load()))
     boards, safe, ahead = exam(args.boards, seed=5)
     phase = np.random.default_rng(0).random(len(receptors))
@@ -61,8 +59,7 @@ def main() -> None:
     with Progress(len(boards), "seeing") as bar:
         for i in range(0, len(boards), CHUNK):
             chunk = boards[i : i + CHUNK]
-            spikes = rhythm(rates(chunk, where, c.side[receptors]), steps, sim.p.dt, phase)
-            counts = sim.counts(torch.from_numpy(spikes)).numpy()
+            counts = sim.counts(Rhythm(rates(chunk, where, c.side[receptors]), steps, sim.p.dt, phase)).numpy()
             for name, idx in groups.items():
                 seen[name].append(counts[:, idx])
             bar.update(len(chunk))

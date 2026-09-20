@@ -13,6 +13,7 @@ from paths import ARTIFACTS_DIR, REPO
 from train.controls import setup
 from train.curve import restore
 from train.evaluate import RUNS_DIR, baselines
+from train.pack import load_gradient_fly
 from train.plasticity import Rule
 
 FLIES_DIR = ARTIFACTS_DIR / "flies"
@@ -33,9 +34,11 @@ def strength(fly: Fly, games: int) -> dict[str, float]:
     return {name: tally(play(fly, opponents[name], games, f"freeze vs {name}"), fly)["win"] for name in ("random", "greedy")}
 
 
-def load_fly(name: str, c=None) -> Fly:
+def load_fly(name: str, c=None, device: str | None = None) -> Fly:
     meta = json.loads((FLIES_DIR / f"{name}.json").read_text())
-    fly, plastic = setup(meta["control"], meta["seed"], Rule(), explore=0.0, c=c)
+    if meta.get("kind") == "gradient":
+        return load_gradient_fly(name, device)
+    fly, plastic = setup(meta["control"], meta["seed"], Rule(), 0.0, c, meta.get("brain", "mb"), device)
     with np.load(FLIES_DIR / f"{name}.npz") as z:
         plastic.load(z["weights"])
     return fly
@@ -67,6 +70,7 @@ def main() -> None:
         "name": args.name,
         "run": run,
         "games": games,
+        "brain": config.get("brain", "mb"),
         "control": config.get("control", "real"),
         "seed": config["seed"],
         "wins": result,

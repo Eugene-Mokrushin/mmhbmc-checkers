@@ -39,7 +39,7 @@ def game_positions(pieces: tuple[int, int], n: int, seed: int = 0) -> list[Posit
 
 
 def measure(fly: Fly, positions: list[Position]) -> dict:
-    kc = fly.counts(positions)[:, fly.mb.members("KC")] > 0
+    kc = fly.counts(positions)[:, fly.kc_cols] > 0
     return {"active": kc.mean(), "overlap": jaccard(kc, np.roll(kc, 1, axis=0)).mean()}
 
 
