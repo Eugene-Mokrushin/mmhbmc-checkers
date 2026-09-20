@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 import scipy.sparse as sp
 import torch
 
@@ -11,8 +13,8 @@ FRAMES = 32  # a 32-bit mask holds this many, which is 160 ms of window
 class Watcher:
     # The serving path. The event-driven simulator asks the card what fired at every
     # step, and each question costs a wait; a thousand waits is seconds of nothing.
-    # Here the spikes ride through the same weights as a matrix product and the frames
-    # they fell in are kept as bits, so a whole board is judged without a single wait.
+    # Here the spikes ride through the same weights as a matrix product, and the card is
+    # asked once per 5 ms frame, which is also how often the website wants a picture.
     def __init__(self, sim: FastLIF):
         self.sim = sim
         weights = sp.csr_array((sim.rows.data.cpu().numpy(), sim.rows.indices.cpu().numpy(), sim.rows.indptr.cpu().numpy()), shape=sim.rows.shape)
@@ -31,17 +33,16 @@ class Watcher:
             other.shape,
         )
 
-    def run(self, inputs, state: State | None = None) -> tuple[torch.Tensor, torch.Tensor]:
-        # spike counts per neuron, and one bit per 5 ms frame saying it fired then.
-        # Neurons go down the rows and boards across the columns, which is the shape the
-        # sparse product wants; turning it the other way round costs a copy per step.
+    def stream(self, inputs, state: State | None = None) -> Iterator[tuple[str, object]]:
+        # ("frame", the neurons that fired in those 5 ms, over every board being judged),
+        # and at the end ("end", spike counts, the frames each neuron fired in)
         sim, p = self.sim, self.sim.p
         steps, batch = inputs.shape[0], inputs.shape[1]
-        lines = torch.stack([inputs[t] for t in range(steps)]).to(sim.device).permute(0, 2, 1).contiguous().to(sim.dtype)
-        began = sim.start(batch, state)
-        v, x, last = (part.T.contiguous() for part in began)
+        lines = inputs.columns().to(sim.device) if hasattr(inputs, "columns") else torch.stack([inputs[t] for t in range(steps)]).to(sim.device).permute(0, 2, 1).contiguous()
+        v, x, last = (part.T.contiguous() for part in sim.start(batch, state))
         counts = torch.zeros((sim.n, batch), dtype=torch.int32, device=sim.device)
         frames = torch.zeros((sim.n, batch), dtype=torch.int64, device=sim.device)
+        lately = torch.zeros(sim.n, dtype=torch.bool, device=sim.device)
         rest = (p.v_rest + sim.bias).reshape(-1, 1)
         per_frame = max(1, round(FRAME_MS / 1000 / p.dt))
         clock = torch.zeros((), dtype=torch.int64, device=sim.device)
@@ -50,5 +51,15 @@ class Watcher:
             fired = spike.to(sim.dtype)
             counts += spike
             frames |= fired.to(torch.int64) << min(t // per_frame, FRAMES - 1)
-            x = x + torch.sparse.mm(self.weights, fired) + torch.sparse.mm(self.lines, lines[t])
-        return counts.T.cpu(), frames.T.cpu()
+            lately |= spike.any(dim=1)
+            x = x + torch.sparse.mm(self.weights, fired) + torch.sparse.mm(self.lines, lines[t].to(sim.dtype))
+            if (t + 1) % per_frame == 0:
+                yield "frame", torch.nonzero(lately)[:, 0].to(torch.int32).cpu().numpy()
+                lately.zero_()
+        yield "end", (counts.T.cpu(), frames.T.cpu())
+
+    def run(self, inputs, state: State | None = None) -> tuple[torch.Tensor, torch.Tensor]:
+        for kind, payload in self.stream(inputs, state):
+            if kind == "end":
+                return payload
+        raise RuntimeError("the simulation ended without a result")

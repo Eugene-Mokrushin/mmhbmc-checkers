@@ -8,7 +8,8 @@ from fastapi import FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from api.pictures import pictures
-from api.flies import Stable
+from api.flies import Stable, spoken
+from api.live import live
 from api.spikes import packed
 from flycore.board import Position
 
@@ -44,6 +45,7 @@ def build(stable: Stable | None = None) -> FastAPI:
         return app.state.stable
 
     pictures(app, stable_now)
+    live(app, stable_now, key)
 
     @app.get("/health")
     async def health() -> dict:
@@ -70,7 +72,7 @@ def build(stable: Stable | None = None) -> FastAPI:
                 return {"move": None, "score": score, "thinking_ms": 0}
             blob = await asyncio.to_thread(packed, frames) if ask.spikes else b""
         answer = {
-            "move": {"origin": move.origin, "destination": move.destination, "captured": move.captured, "path": list(move.path), "promotes": move.promotes},
+            "move": spoken(move),
             "score": round(score, 4),
             "thinking_ms": int((time.monotonic() - started) * 1000),
         }

@@ -45,6 +45,13 @@ class Rhythm:
         self.rate, self.phase = self.rate.to(device), self.phase.to(device)
         return self
 
+    def columns(self) -> "Rhythm":
+        # the same trains with lines down the rows and boards across, which is the shape
+        # the serving path multiplies by
+        other = Rhythm(self.rate.T.contiguous(), self.shape[0], self.dt, self.phase.reshape(-1, 1))
+        other.shape = (self.shape[0], self.shape[2], self.shape[1])
+        return other
+
     def __getitem__(self, t: int) -> torch.Tensor:
         return torch.floor(((t + 1) * self.dt + self.phase) * self.rate) > torch.floor((t * self.dt + self.phase) * self.rate)
 

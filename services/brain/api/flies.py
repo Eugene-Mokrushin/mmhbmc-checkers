@@ -30,11 +30,21 @@ class Stabled:
     def thinking(self, depth: int) -> Player:
         return self.player if depth <= 1 else Imagination(self.centred, depth=depth, breadth=BREADTH, seed=depth)
 
-    def watch(self, boards) -> tuple[np.ndarray, torch.Tensor]:
+    def watching(self, boards):
+        # the simulation as it happens, a frame at a time
         if self.watcher is None:
             self.watcher = Watcher(self.player.sim)
-        counts, frames = self.watcher.run(self.player.inputs(boards), getattr(self.player, "rest", None))
-        return counts.numpy(), frames
+        return self.watcher.stream(self.player.inputs(boards), getattr(self.player, "rest", None))
+
+    def watch(self, boards) -> tuple[np.ndarray, torch.Tensor]:
+        for kind, payload in self.watching(boards):
+            if kind == "end":
+                return payload[0].numpy(), payload[1]
+        raise RuntimeError("the simulation ended without a result")
+
+
+def spoken(move: Move) -> dict:
+    return {"origin": move.origin, "destination": move.destination, "captured": move.captured, "path": list(move.path), "promotes": move.promotes}
 
 
 def devices() -> list[str]:
@@ -63,9 +73,13 @@ class Stable:
         if not after:
             return None, -1.0, None
         counts, frames = fly.watch(after)
-        scores = fly.player.read(counts) if depth <= 1 else np.asarray(fly.thinking(depth).scores(after))
-        pick = int(np.argmax(scores))
-        return options[0][pick], float(scores[pick]), frames[pick]
+        move, score, pick = self.pick(fly, options[0], after, counts, depth)
+        return move, score, frames[pick]
+
+    def pick(self, fly: Stabled, moves: list[Move], after: list[Position], counts, depth: int) -> tuple[Move, float, int]:
+        scores = fly.player.read(counts if isinstance(counts, np.ndarray) else counts.numpy()) if depth <= 1 else np.asarray(fly.thinking(depth).scores(after))
+        chosen = int(np.argmax(scores))
+        return moves[chosen], float(scores[chosen]), chosen
 
     def state(self) -> dict:
         cards = [{"name": torch.cuda.get_device_name(i), "memory_used_mb": round(torch.cuda.memory_allocated(i) / 2**20)} for i in range(torch.cuda.device_count())]
