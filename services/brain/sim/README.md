@@ -77,3 +77,13 @@ synapse count, times a learned factor that starts at 1. Spikes stay
 all-or-nothing going forward; going back, the gradient passes through a smooth
 stand-in for the threshold (surrogate gradients, Zenke & Ganguli 2018). The
 window is recomputed in 25-step segments during the backward pass to save memory.
+
+## Drawing the brain
+
+`api/atlas.py` sends the website two things, in one shared frame so they line up:
+where each of a fly's neurons sits, in the order that fly's simulator numbers
+them, and the brain's own outline. The outline is FlyWire's whole-brain tissue
+mesh, built from Peter Li's FAFB tissue mask and published with
+[navis-flybrains](https://github.com/navis-org/navis-flybrains); keep it at
+`data/flywire_brain.ply`. The neuron positions are the FlyWire marker
+coordinates, one real point per neuron, not its branches.
