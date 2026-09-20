@@ -71,6 +71,11 @@ class Fly(Player):
     def raster(self, position) -> np.ndarray:
         return self.sim.raster(self.inputs([position]), self.rest)[:, 0].numpy()
 
+    def read(self, counts: np.ndarray) -> np.ndarray:
+        # the same judgement, from the spike counts of every neuron rather than the few
+        # the player keeps
+        return counts[:, self.mbons] @ self.valence
+
     def judge(self, counts: np.ndarray) -> np.ndarray:
         # approach MBON spikes minus avoid MBON spikes
         return counts[:, self.mbon_cols] @ self.valence

@@ -65,10 +65,10 @@ def build(stable: Stable | None = None) -> FastAPI:
         lock = app.state.locks.setdefault(stable.flies[ask.fly].device, asyncio.Lock())
         started = time.monotonic()
         async with lock:
-            move, score, after = await asyncio.to_thread(stable.choose, ask.fly, ask.depth, Position(*ask.position))
+            move, score, frames = await asyncio.to_thread(stable.choose, ask.fly, ask.depth, Position(*ask.position))
             if move is None:
                 return {"move": None, "score": score, "thinking_ms": 0}
-            blob = await asyncio.to_thread(packed, stable.flies[ask.fly].player, after) if ask.spikes else b""
+            blob = await asyncio.to_thread(packed, frames) if ask.spikes else b""
         answer = {
             "move": {"origin": move.origin, "destination": move.destination, "captured": move.captured, "path": list(move.path), "promotes": move.promotes},
             "score": round(score, 4),

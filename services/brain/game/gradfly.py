@@ -47,6 +47,9 @@ class GradFly(Player):
         where = {pos: i for i, pos in enumerate(unique)}
         return np.concatenate(out)[[where[pos] for pos in positions]]
 
+    def read(self, counts: np.ndarray) -> np.ndarray:
+        return counts[:, self.dn] @ self.head[:-1] + self.head[-1]
+
     def judge(self, counts: np.ndarray) -> np.ndarray:
         return counts @ self.head[:-1] + self.head[-1]
 

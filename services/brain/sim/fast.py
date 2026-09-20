@@ -40,8 +40,9 @@ class FastLIF:
         if scale is not None:
             scale = torch.as_tensor(scale, dtype=self.dtype).to(self.device)
         rest = p.v_rest + self.bias
+        clock = torch.zeros((), dtype=torch.int64, device=self.device)
         for t in range(steps):
-            v, x, last, spike = step(v, x, last, torch.tensor(t), rest, self.decay_v, self.decay_x, self.x_to_v, p.v_reset, p.v_th, p.ref_steps)
+            v, x, last, spike = step(v, x, last, clock.fill_(t), rest, self.decay_v, self.decay_x, self.x_to_v, p.v_reset, p.v_th, p.ref_steps)
             fired = find(spike)
             if len(fired[0]):
                 self.rows.send(x, *fired)
