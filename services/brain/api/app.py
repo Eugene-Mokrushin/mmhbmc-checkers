@@ -4,11 +4,13 @@ import contextlib
 import os
 import time
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
+from api.atlas import atlas
 from api.flies import Stable
 from api.spikes import packed
+from connectome.coordinates import one_per_neuron, read_markers
 from flycore.board import Position
 
 
@@ -31,6 +33,7 @@ def build(stable: Stable | None = None) -> FastAPI:
     app = FastAPI(title="fly brain", lifespan=lifespan)
     app.state.stable = stable
     app.state.locks = {}
+    app.state.atlas, app.state.points = {}, None
 
     def guard(given: str) -> None:
         if key and given != key:
@@ -52,6 +55,17 @@ def build(stable: Stable | None = None) -> FastAPI:
         guard(x_brain_key)
         stable = stable_now()
         return {"flies": [{"name": name, "depths": [1, 2, 3]} for name in stable.flies]}
+
+    @app.get("/atlas/{fly}")
+    async def positions(fly: str) -> Response:
+        stable = stable_now()
+        if fly not in stable.flies:
+            raise HTTPException(404, f"no fly called {fly}")
+        if fly not in app.state.atlas:
+            if app.state.points is None:
+                app.state.points = await asyncio.to_thread(lambda: one_per_neuron(read_markers()))
+            app.state.atlas[fly] = await asyncio.to_thread(atlas, stable.flies[fly].root_id, app.state.points)
+        return Response(app.state.atlas[fly], media_type="application/octet-stream", headers={"Cache-Control": "public, max-age=604800"})
 
     @app.post("/choose")
     async def choose(ask: Ask, x_brain_key: str = Header(default="")) -> dict:

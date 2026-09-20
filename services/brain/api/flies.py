@@ -1,6 +1,7 @@
 import itertools
 from dataclasses import dataclass
 
+import numpy as np
 import torch
 
 from connectome.load import load
@@ -22,6 +23,7 @@ class Stabled:
     player: Player
     centred: Centered
     device: str
+    root_id: np.ndarray  # the neurons its simulator holds, in its own order
 
     def thinking(self, depth: int) -> Player:
         return self.player if depth <= 1 else Imagination(self.centred, depth=depth, breadth=BREADTH, seed=depth)
@@ -39,10 +41,12 @@ class Stable:
     # the flies the website can play against, spread over the graphics cards
     def __init__(self, names: list[str] | None = None, cards: list[str] | None = None):
         c, cards = load(), cards or devices()
-        self.flies: dict[str, Stabled] = {}
+        self.c, self.flies = c, {}
         for name, device in zip(names or kept(), itertools.cycle(cards)):
             player = load_fly(name, c, device)
-            self.flies[name] = Stabled(name, player, Centered(player, exam(TYPICAL, seed=3)[0]), device)
+            mb = getattr(player, "mb", None)
+            root_id = mb.graph.root_id if mb is not None and player.sim.n == mb.graph.n else c.root_id
+            self.flies[name] = Stabled(name, player, Centered(player, exam(TYPICAL, seed=3)[0]), device, root_id)
 
     def choose(self, name: str, depth: int, position: Position) -> tuple[Move | None, float, Position | None]:
         fly = self.flies[name]
