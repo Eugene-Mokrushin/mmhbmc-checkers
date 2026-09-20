@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from api.atlas import SPAN, Drawings, Envelope, atlas, frame
+from api.atlas import SPAN, Drawings, atlas, frame
+from api.symmetry import Envelope
 
 
 def markers(roots) -> pd.DataFrame:

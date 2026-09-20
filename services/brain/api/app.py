@@ -28,7 +28,9 @@ def build(stable: Stable | None = None) -> FastAPI:
     async def lifespan(app: FastAPI):
         # loading the flies takes a while; do it before the first visitor arrives
         await asyncio.to_thread(stable_now)
+        drawing = asyncio.create_task(warm())
         yield
+        drawing.cancel()
 
     app = FastAPI(title="fly brain", lifespan=lifespan)
     app.state.stable = stable
@@ -44,7 +46,7 @@ def build(stable: Stable | None = None) -> FastAPI:
             app.state.locks = {device: asyncio.Lock() for device in {f.device for f in app.state.stable.flies.values()}}
         return app.state.stable
 
-    pictures(app, stable_now)
+    warm = pictures(app, stable_now)
     live(app, stable_now, key)
 
     @app.get("/health")
