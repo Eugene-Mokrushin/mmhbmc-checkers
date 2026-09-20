@@ -36,3 +36,13 @@ def test_frames_say_when_a_neuron_fired():
             when = torch.nonzero(raster[:, board, neuron])[:, 0] // per_frame
             kept = [bit for bit in range(32) if frames[board, neuron].item() >> bit & 1]
             assert kept == sorted(set(when.tolist()))
+
+
+def test_every_fly_the_website_serves_can_be_watched():
+    # the watcher asks the fly for its input spikes; a fly that cannot answer cannot play
+    from game.fly import Fly
+    from game.gradfly import GradFly
+    from game.wholefly import WholeFly
+
+    for kind in (Fly, WholeFly, GradFly):
+        assert callable(getattr(kind, "inputs", None)), kind.__name__

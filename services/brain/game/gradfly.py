@@ -41,6 +41,9 @@ class GradFly(Player):
         self.eyes, self.dn, self.head = Eyes(c, points), descending(c), np.asarray(head)
         self.sim = FastLIF(weights, self.eyes.projection, LIF(dt=DT, input_gain=1.0), device=device)
 
+    def inputs(self, positions) -> Rhythm:
+        return self.eyes.inputs(positions)
+
     def counts(self, positions) -> np.ndarray:
         unique = list(dict.fromkeys(positions))
         out = [self.sim.counts(self.eyes.inputs(unique[i : i + CHUNK])).numpy()[:, self.dn] for i in range(0, len(unique), CHUNK)]
