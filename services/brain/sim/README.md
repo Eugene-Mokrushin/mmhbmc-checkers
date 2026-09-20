@@ -89,3 +89,14 @@ picture is drawn from the same frame, so the small fly's mushroom body sits wher
 it belongs inside the whole brain. A neuron Codex has no skeleton for is drawn at
 its marker coordinate, a single point. Nothing else is drawn: as on FlyWire, the
 neurons are the brain.
+
+FAFB kept more of the left eye than the right, and a picture built straight from
+it comes out lopsided over a brain that is symmetrical, so `api/symmetry.py` cuts
+each column across the head back to whichever side reaches less far.
+
+`connectome/body.py` builds `data/flybody.npz`, the fly itself: the whole-body
+model published with [flybody](https://github.com/TuragaLab/flybody) (Vaxenburg
+et al., Apache 2.0), traced from a micro-CT scan of a real fly. Its meshes are
+assembled through the joint transforms in its MuJoCo model, thinned to an
+outline, and kept in the connectome's own nanometres about the middle of its
+head, so the brain drops straight in at its true size.

@@ -54,9 +54,10 @@ def held(root_id: np.ndarray) -> list[np.ndarray]:
     # what an earlier run already fetched, so a second run only fills the gaps
     if not STORE.exists():
         return [np.zeros((0, 3), dtype=np.float32) for _ in root_id]
-    with np.load(STORE) as kept:
-        ends = np.cumsum(kept["counts"])
-        have = {int(root): kept["xyz"][end - n : end] for root, n, end in zip(kept["root_id"], kept["counts"], ends)}
+    with np.load(STORE) as store:
+        kept, counts, xyz = store["root_id"], store["counts"], store["xyz"]
+    ends = np.cumsum(counts)
+    have = {int(root): xyz[end - n : end] for root, n, end in zip(kept, counts, ends)}
     return [have.get(int(root), np.zeros((0, 3), dtype=np.float32)) for root in root_id]
 
 
