@@ -4,7 +4,8 @@ import pandas as pd
 from paths import DATA_DIR
 
 SPAN = 32000  # a whole brain half-width, comfortably inside a 16-bit number
-MESH = DATA_DIR / "flywire_brain.ply"
+BUDGET = 700_000  # points in one picture of a brain, shared out among its neurons
+SKELETONS = DATA_DIR / "skeletons.npz"
 
 
 def frame(points: pd.DataFrame) -> tuple[np.ndarray, float]:
@@ -16,32 +17,50 @@ def frame(points: pd.DataFrame) -> tuple[np.ndarray, float]:
 
 
 def scaled(xyz: np.ndarray, middle: np.ndarray, spread: float) -> np.ndarray:
-    # 16-bit numbers wrap around past 32767, which would throw a vertex to the far side
+    # 16-bit numbers wrap around past 32767, which would throw a point to the far side
     # of the brain, so anything beyond the frame is held at its edge
     return np.clip(np.nan_to_num((xyz - middle) / spread, nan=0.0), -1.02, 1.02) * SPAN
 
 
-def atlas(root_id: np.ndarray, points: pd.DataFrame, middle: np.ndarray, spread: float) -> bytes:
-    # where each of a fly's neurons sits, in the order its simulator uses, so a spike
-    # can be drawn where it happened
-    xyz = points.reindex(root_id).to_numpy(dtype=np.float64)
-    return np.uint32(len(root_id)).tobytes() + scaled(xyz, middle, spread).astype("<i2").tobytes()
+class Drawings:
+    # FlyWire's own skeletons, thinned: the places each cell runs through, not one dot
+    def __init__(self, path=SKELETONS):
+        with np.load(path) as held:
+            counts = held["counts"].astype(np.int64)
+            self.root_id, self.xyz = held["root_id"], held["xyz"]
+            self.starts = np.cumsum(counts) - counts
+            self.counts = counts
+        self.order = np.argsort(self.root_id)
+        self.sorted = self.root_id[self.order]
+
+    def of(self, root: int) -> np.ndarray:
+        found = np.searchsorted(self.sorted, root)
+        if found >= len(self.sorted) or self.sorted[found] != root:
+            return self.xyz[:0]
+        at = self.order[found]
+        return self.xyz[self.starts[at] : self.starts[at] + self.counts[at]]
 
 
-def surface(middle: np.ndarray, spread: float) -> bytes:
-    # the brain's own outline, the tissue mesh FlyWire publishes, in the same frame
-    raw = MESH.read_bytes()
-    head = raw[: raw.index(b"end_header\n") + 11]
-    lines = head.split(b"\n")
-    vertices = int([line for line in lines if line.startswith(b"element vertex")][0].split()[-1])
-    faces = int([line for line in lines if line.startswith(b"element face")][0].split()[-1])
-    body = raw[len(head) :]
-    xyz = np.frombuffer(body, dtype="<f4", count=vertices * 3).reshape(-1, 3)
-    rest = np.frombuffer(body, dtype=np.uint8, offset=vertices * 12)
-    corners = rest.reshape(faces, 13)[:, 1:].copy().view("<u4")
-    # a handful of triangles in the published mesh stretch right across the brain;
-    # they show up as streaks, so they go
-    put = scaled(xyz, middle, spread)
-    sides = np.linalg.norm(put[corners[:, 0]] - put[corners[:, 1]], axis=1)
-    corners = corners[sides < 0.1 * SPAN]
-    return np.uint32([vertices, len(corners)]).tobytes() + put.astype("<i2").tobytes() + corners.astype("<u4").tobytes()
+def spread_out(root_id: np.ndarray, points: pd.DataFrame, drawn: "Drawings | None", budget: int = BUDGET):
+    # every neuron gets the same share of the picture; one with no skeleton keeps its marker
+    share = max(1, budget // max(1, len(root_id)))
+    marks = points.reindex(root_id).to_numpy(dtype=np.float64)
+    counts = np.ones(len(root_id), dtype=np.uint16)
+    out = []
+    for i, root in enumerate(root_id):
+        line = drawn.of(int(root)) if drawn is not None else np.zeros((0, 3))
+        if not len(line):
+            out.append(marks[i : i + 1])
+            continue
+        take = np.linspace(0, len(line) - 1, min(len(line), share)).astype(int)
+        out.append(line[take])
+        counts[i] = len(take)
+    return np.concatenate(out), counts
+
+
+def atlas(root_id: np.ndarray, points: pd.DataFrame, middle: np.ndarray, spread: float, drawn: "Drawings | None" = None, budget: int = BUDGET) -> bytes:
+    # where each of a fly's neurons runs, in the order its simulator numbers them, so a
+    # spike can be drawn along the cell that made it
+    xyz, counts = spread_out(root_id, points, drawn, budget)
+    head = np.uint32([len(root_id), len(xyz)]).tobytes()
+    return head + counts.astype("<u2").tobytes() + scaled(xyz, middle, spread).astype("<i2").tobytes()

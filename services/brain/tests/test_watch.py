@@ -46,3 +46,13 @@ def test_every_fly_the_website_serves_can_be_watched():
 
     for kind in (Fly, WholeFly, GradFly):
         assert callable(getattr(kind, "inputs", None)), kind.__name__
+
+
+def test_the_website_is_shown_a_frame_every_two_milliseconds():
+    weights, projection, inputs = network()
+    sim = FastLIF(weights, projection, LIF(input_gain=1.0))
+    watcher = Watcher(sim)
+    steps = inputs.shape[0]
+    for every, expected in ((2.0, steps // round(0.002 / sim.p.dt)), (5.0, steps // round(0.005 / sim.p.dt))):
+        seen = [kind for kind, _ in watcher.stream(inputs, every_ms=every) if kind == "frame"]
+        assert len(seen) == expected

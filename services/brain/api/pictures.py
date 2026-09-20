@@ -1,11 +1,10 @@
 import asyncio
+import hashlib
 
 from fastapi import FastAPI, HTTPException, Response
 
-from api.atlas import atlas, frame, surface
+from api.atlas import SKELETONS, Drawings, atlas, frame
 from connectome.coordinates import one_per_neuron, read_markers
-
-import hashlib
 
 
 def keep(blob: bytes) -> dict:
@@ -14,15 +13,16 @@ def keep(blob: bytes) -> dict:
 
 
 def pictures(app: FastAPI, flies) -> None:
-    # what the website needs to draw a brain: where a fly's neurons sit, and the
-    # outline of the brain they sit in. Both are the same for every game, so they are
-    # worked out once and kept.
-    held: dict = {"points": None, "frame": None, "atlas": {}, "mesh": None}
+    # what the website needs to draw a brain: the places each of a fly's neurons runs
+    # through. It is the same for every game, so it is worked out once and kept.
+    held: dict = {"points": None, "frame": None, "drawn": None, "atlas": {}}
 
     async def anatomy():
         if held["points"] is None:
             held["points"] = await asyncio.to_thread(lambda: one_per_neuron(read_markers()))
             held["frame"] = await asyncio.to_thread(frame, held["points"])
+            if SKELETONS.exists():
+                held["drawn"] = await asyncio.to_thread(Drawings)
         return held["points"], *held["frame"]
 
     @app.get("/atlas/{fly}")
@@ -32,12 +32,6 @@ def pictures(app: FastAPI, flies) -> None:
             raise HTTPException(404, f"no fly called {fly}")
         if fly not in held["atlas"]:
             points, middle, spread = await anatomy()
-            held["atlas"][fly] = await asyncio.to_thread(atlas, stable.flies[fly].root_id, points, middle, spread)
+            made = await asyncio.to_thread(atlas, stable.flies[fly].root_id, points, middle, spread, held["drawn"])
+            held["atlas"][fly] = made
         return Response(held["atlas"][fly], media_type="application/octet-stream", headers=keep(held["atlas"][fly]))
-
-    @app.get("/mesh")
-    async def mesh() -> Response:
-        if held["mesh"] is None:
-            _, middle, spread = await anatomy()
-            held["mesh"] = await asyncio.to_thread(surface, middle, spread)
-        return Response(held["mesh"], media_type="application/octet-stream", headers=keep(held["mesh"]))

@@ -80,10 +80,12 @@ window is recomputed in 25-step segments during the backward pass to save memory
 
 ## Drawing the brain
 
-`api/atlas.py` sends the website two things, in one shared frame so they line up:
-where each of a fly's neurons sits, in the order that fly's simulator numbers
-them, and the brain's own outline. The outline is FlyWire's whole-brain tissue
-mesh, built from Peter Li's FAFB tissue mask and published with
-[navis-flybrains](https://github.com/navis-org/navis-flybrains); keep it at
-`data/flywire_brain.ply`. The neuron positions are the FlyWire marker
-coordinates, one real point per neuron, not its branches.
+`api/atlas.py` sends the website the places each of a fly's neurons runs
+through, in the order that fly's simulator numbers them, so a spike can be drawn
+along the cell that made it. The points are FlyWire's own coarse skeletons, as
+Codex publishes them: `connectome/skeletons.py` fetches one per neuron, keeps 64
+points spread along it, and stores the lot in `data/skeletons.npz`. Every fly's
+picture is drawn from the same frame, so the small fly's mushroom body sits where
+it belongs inside the whole brain. A neuron Codex has no skeleton for is drawn at
+its marker coordinate, a single point. Nothing else is drawn: as on FlyWire, the
+neurons are the brain.

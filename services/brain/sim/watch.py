@@ -6,8 +6,9 @@ import torch
 from sim.fast import FastLIF, State
 from sim.kernels import step
 
-FRAME_MS = 5
+FRAME_MS = 5  # the still picture's mask
 FRAMES = 32  # a 32-bit mask holds this many, which is 160 ms of window
+LIVE_MS = 2  # how often the website is told what fired, in brain time
 
 
 class Watcher:
@@ -33,7 +34,7 @@ class Watcher:
             other.shape,
         )
 
-    def stream(self, inputs, state: State | None = None) -> Iterator[tuple[str, object]]:
+    def stream(self, inputs, state: State | None = None, every_ms: float = LIVE_MS) -> Iterator[tuple[str, object]]:
         # ("frame", the neurons that fired in those 5 ms, over every board being judged),
         # and at the end ("end", spike counts, the frames each neuron fired in)
         sim, p = self.sim, self.sim.p
@@ -45,6 +46,7 @@ class Watcher:
         lately = torch.zeros(sim.n, dtype=torch.bool, device=sim.device)
         rest = (p.v_rest + sim.bias).reshape(-1, 1)
         per_frame = max(1, round(FRAME_MS / 1000 / p.dt))
+        per_yield = max(1, round(every_ms / 1000 / p.dt))
         clock = torch.zeros((), dtype=torch.int64, device=sim.device)
         for t in range(steps):
             v, x, last, spike = step(v, x, last, clock.fill_(t), rest, sim.decay_v, sim.decay_x, sim.x_to_v, p.v_reset, p.v_th, p.ref_steps)
@@ -53,7 +55,7 @@ class Watcher:
             frames |= fired.to(torch.int64) << min(t // per_frame, FRAMES - 1)
             lately |= spike.any(dim=1)
             x = x + torch.sparse.mm(self.weights, fired) + torch.sparse.mm(self.lines, lines[t].to(sim.dtype))
-            if (t + 1) % per_frame == 0:
+            if (t + 1) % per_yield == 0:
                 yield "frame", torch.nonzero(lately)[:, 0].to(torch.int32).cpu().numpy()
                 lately.zero_()
         yield "end", (counts.T.cpu(), frames.T.cpu())
