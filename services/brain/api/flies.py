@@ -1,4 +1,5 @@
 import itertools
+import json
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -25,6 +26,7 @@ class Stabled:
     centred: Centered
     device: str
     root_id: np.ndarray  # the neurons its simulator holds, in its own order
+    depths: list[int]  # how far ahead it may be asked to think, where that helps it
     watcher: Watcher | None = field(default=None)
 
     def thinking(self, depth: int) -> Player:
@@ -64,7 +66,8 @@ class Stable:
             player = load_fly(name, c, device)
             mb = getattr(player, "mb", None)
             root_id = mb.graph.root_id if mb is not None and player.sim.n == mb.graph.n else c.root_id
-            self.flies[name] = Stabled(name, player, Centered(player, exam(TYPICAL, seed=3)[0]), device, root_id)
+            meta = json.loads((FLIES_DIR / f"{name}.json").read_text())
+            self.flies[name] = Stabled(name, player, Centered(player, exam(TYPICAL, seed=3)[0]), device, root_id, meta.get("depths", [1]))
 
     def choose(self, name: str, depth: int, position: Position) -> tuple[Move | None, float, "torch.Tensor | None"]:
         # every legal move is judged in one pass, which also records what fired for each

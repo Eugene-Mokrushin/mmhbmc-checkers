@@ -56,7 +56,7 @@ def build(stable: Stable | None = None) -> FastAPI:
     async def flies(x_brain_key: str = Header(default="")) -> dict:
         guard(x_brain_key)
         stable = stable_now()
-        return {"flies": [{"name": name, "depths": [1, 2, 3]} for name in stable.flies]}
+        return {"flies": [{"name": name, "depths": fly.depths} for name, fly in stable.flies.items()]}
 
     @app.post("/choose")
     async def choose(ask: Ask, x_brain_key: str = Header(default="")) -> dict:
