@@ -1,0 +1,28 @@
+{
+  "name": "plain",
+  "run": "a3-greedy",
+  "games": 2048,
+  "control": "real",
+  "seed": 0,
+  "wins": {
+    "random": 0.69,
+    "greedy": 0.7333333333333333
+  },
+  "sim": {
+    "dt": 0.0001,
+    "v_rest": -0.052,
+    "v_reset": -0.052,
+    "v_th": -0.045,
+    "tau_m": 0.02,
+    "tau_s": 0.005,
+    "t_ref": 0.0022,
+    "w_syn": 0.000275,
+    "input_rate": 150.0,
+    "input_gain": 2.4,
+    "mbon_drive": 0.0073
+  },
+  "commit": "7cb73189b6b9974b0932bc5c80fed585dcad1fc1",
+  "depths": [
+    1
+  ]
+}

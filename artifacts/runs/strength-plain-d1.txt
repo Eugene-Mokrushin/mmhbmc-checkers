@@ -1,0 +1,4 @@
+plain fly, 50 games per cell, imagining 2 replies per move
+
+                     minimax 2         minimax 3
+depth 1             4% W 20% D         0% W 4% D

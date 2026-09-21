@@ -1,0 +1,15 @@
+{
+  "run": "g-games",
+  "init": "../../artifacts/runs/g-teacher/g-0020000.pt",
+  "rounds": 100,
+  "games": 64,
+  "steps": 40,
+  "positions": 8,
+  "boards": 48,
+  "lr": 0.0003,
+  "explore": 0.1,
+  "depth": 7,
+  "eval_every": 10,
+  "eval_games": 50,
+  "seed": 0
+}

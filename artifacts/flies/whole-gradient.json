@@ -1,0 +1,18 @@
+{
+  "name": "whole-gradient",
+  "kind": "gradient",
+  "checkpoint": "g-games/g-00100.pt",
+  "depths": [
+    1
+  ],
+  "wins": {
+    "random": 0.98,
+    "greedy": 0.92,
+    "minimax2": 0.16
+  },
+  "draws": {
+    "minimax2": 0.78
+  },
+  "agrees_with_depth_7": 0.775,
+  "commit": "490af9cde46ff9334865865129e7adee8cb5d7e3"
+}

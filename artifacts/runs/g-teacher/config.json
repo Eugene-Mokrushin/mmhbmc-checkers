@@ -1,0 +1,11 @@
+{
+  "run": "g-teacher",
+  "steps": 20000,
+  "positions": 16,
+  "lr": 0.001,
+  "depth": 7,
+  "eval_every": 1000,
+  "eval_games": 50,
+  "init": null,
+  "seed": 0
+}

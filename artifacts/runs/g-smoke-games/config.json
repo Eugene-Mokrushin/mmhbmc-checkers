@@ -1,0 +1,15 @@
+{
+  "run": "g-smoke-games",
+  "init": "../../artifacts/runs/g-smoke/g-0000002.pt",
+  "rounds": 1,
+  "games": 2,
+  "steps": 1,
+  "positions": 1,
+  "boards": 4,
+  "lr": 0.001,
+  "explore": 0.1,
+  "depth": 3,
+  "eval_every": 1,
+  "eval_games": 0,
+  "seed": 0
+}

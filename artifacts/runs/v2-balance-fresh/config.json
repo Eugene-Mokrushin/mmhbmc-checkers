@@ -1,0 +1,16 @@
+{
+  "run": "v2-balance-fresh",
+  "games": 4096,
+  "opponent": "random",
+  "control": "real",
+  "reward": "balance",
+  "init": null,
+  "parallel": 256,
+  "eval_every": 1024,
+  "eval_games": 100,
+  "eval_against": "random,greedy",
+  "explore": 0.05,
+  "rate": 1.0,
+  "decay": 0.6,
+  "seed": 0
+}

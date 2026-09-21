@@ -1,0 +1,29 @@
+{
+  "name": "whole-dopamine",
+  "run": "w-random",
+  "games": 1024,
+  "brain": "whole",
+  "control": "real",
+  "seed": 0,
+  "wins": {
+    "random": 0.685,
+    "greedy": 0.705
+  },
+  "sim": {
+    "dt": 0.0001,
+    "v_rest": -0.052,
+    "v_reset": -0.052,
+    "v_th": -0.045,
+    "tau_m": 0.02,
+    "tau_s": 0.005,
+    "t_ref": 0.0022,
+    "w_syn": 0.000275,
+    "input_rate": 150.0,
+    "input_gain": 1.0,
+    "mbon_drive": 0.0073
+  },
+  "commit": "",
+  "depths": [
+    1
+  ]
+}

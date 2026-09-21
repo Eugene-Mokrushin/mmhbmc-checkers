@@ -1,0 +1,29 @@
+Version 4, first attempt: the brain is not put back to rest between moves.
+
+The same fly, the same weights, the only difference being how much of the brain
+survives the gap between one move and the next. 50 games a row, whole-gradient,
+on one 2060.
+
+                     vs random        vs greedy      vs minimax 2
+  reset each move    88% W  4% D     92-94% W       4% W 28% D 68% L
+  carried whole      90% W  0% D     72% W  2% D    2% W  4% D 94% L
+
+How much of it survives, against greedy:
+
+  none (reset)   94% W
+  a quarter      88% W
+  a half         84% W
+  three quarters 78% W
+  all of it      72% W
+
+Monotonic: every scrap of the previous move that survives costs it something.
+
+It is not that the brain winds down. Over 40 moves carrying everything, the mean
+membrane voltage settles from -56.16 mV to about -56.6 and stays there, and the
+share of cells near threshold rises slightly (17.8% to 19.9%). The activity is
+stable — it is simply a different operating point from the one the readout was
+fitted to. The fly was taught to judge a board with a brain at rest, and we are
+asking it to judge one with a brain still busy with the board before.
+
+So memory cannot be bolted on. If a fly is to have it, it has to be taught with
+it. That is the next version.

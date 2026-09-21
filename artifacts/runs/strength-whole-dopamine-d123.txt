@@ -1,0 +1,6 @@
+whole-dopamine fly, 50 games per cell, imagining 2 replies per move
+
+                     minimax 2         minimax 3
+depth 1             0% W 26% D         0% W 4% D
+depth 2              0% W 4% D         0% W 0% D
+depth 3              0% W 8% D         0% W 0% D

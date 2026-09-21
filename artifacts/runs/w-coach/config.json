@@ -1,0 +1,12 @@
+{
+  "run": "w-coach",
+  "positions": 60000,
+  "batch": 64,
+  "rate": 1.0,
+  "decay": 0.6,
+  "depth": 7,
+  "explore": 0.05,
+  "eval_every": 20000,
+  "eval_games": 50,
+  "seed": 0
+}

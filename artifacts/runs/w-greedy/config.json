@@ -1,0 +1,17 @@
+{
+  "run": "w-greedy",
+  "games": 4096,
+  "opponent": "greedy",
+  "brain": "whole",
+  "control": "real",
+  "reward": "shaped",
+  "init": "w-random",
+  "parallel": 256,
+  "eval_every": 1024,
+  "eval_games": 100,
+  "eval_against": "random,greedy,minimax2,untrained",
+  "explore": 0.05,
+  "rate": 1.0,
+  "decay": 0.6,
+  "seed": 0
+}

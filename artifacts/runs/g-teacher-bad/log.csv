@@ -1,0 +1,2 @@
+minutes,step,loss,rank,value,agree,own,train_win,test_loss,test_rank,test_value,test_agree,random,greedy,minimax2
+51.5,1000,3.3596,1.9651,1.3945,0.6674,,,3.6795,2.3044,1.3752,0.62,0.52,0.42,0.0

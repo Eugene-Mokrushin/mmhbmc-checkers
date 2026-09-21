@@ -1,0 +1,18 @@
+{
+  "run": "v2-dose-plain",
+  "games": 4096,
+  "opponent": "greedy",
+  "control": "real",
+  "reward": "balance",
+  "init": "a3-greedy@2048",
+  "parallel": 256,
+  "eval_every": 1024,
+  "eval_games": 100,
+  "eval_against": "random,greedy",
+  "explore": 0.05,
+  "rate": 1.0,
+  "decay": 0.6,
+  "game_dose": 1.0,
+  "game_decay": 0.95,
+  "seed": 0
+}

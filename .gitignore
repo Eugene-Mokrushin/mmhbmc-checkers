@@ -1,6 +1,21 @@
 data/
+# the record of what was run is kept: every run's settings and its curve, the write-ups,
+# and the three frozen flies. The intermediate checkpoints are not — they are forty
+# megabytes of things the frozen flies already are.
 artifacts/*
 !artifacts/.gitkeep
+!artifacts/runs/
+artifacts/runs/*
+!artifacts/runs/*.txt
+!artifacts/runs/*/
+artifacts/runs/*/*
+!artifacts/runs/*/log.csv
+!artifacts/runs/*/config.json
+!artifacts/flies/
+artifacts/flies/*
+!artifacts/flies/*.json
+!artifacts/flies/*.npz
+!artifacts/flies/*.pt
 .venv/
 __pycache__/
 *.pyc

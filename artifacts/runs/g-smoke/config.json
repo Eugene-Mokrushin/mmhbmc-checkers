@@ -1,0 +1,11 @@
+{
+  "run": "g-smoke",
+  "steps": 2,
+  "positions": 1,
+  "lr": 0.003,
+  "depth": 3,
+  "eval_every": 2,
+  "eval_games": 0,
+  "init": null,
+  "seed": 0
+}

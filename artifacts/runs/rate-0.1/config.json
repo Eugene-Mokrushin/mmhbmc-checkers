@@ -1,0 +1,13 @@
+{
+  "run": "rate-0.1",
+  "games": 128,
+  "opponent": "random",
+  "reward": "shaped",
+  "parallel": 64,
+  "eval_every": 64,
+  "eval_games": 0,
+  "explore": 0.05,
+  "rate": 0.1,
+  "decay": 0.6,
+  "seed": 0
+}

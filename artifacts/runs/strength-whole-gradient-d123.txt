@@ -1,0 +1,9 @@
+whole-gradient fly, 50 games per cell, imagining 2 replies per move
+
+                     minimax 2                 minimax 3
+depth 1             16% W 78% D  6% L        10% W 50% D 40% L
+depth 2             14% W 56% D 30% L        not run
+
+Looking ahead with its own judgement costs it more than it gains, as with the
+dopamine fly, so the website offers this fly at depth 1 only. The depth 3 cells
+were not run: depth 2 had already fallen behind depth 1 and the pod was renting.

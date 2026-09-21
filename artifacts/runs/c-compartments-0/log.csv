@@ -1,0 +1,3 @@
+minutes,games,random,greedy,minimax2,untrained,safety,material,train_win,kc_active,mbon_hz,depressed
+1.3,0,0.6,,,,0.5465,0.4501,,,,
+14.4,1024,0.47,,,,0.567,0.5018,0.5898,0.0983,45.6384,0.0914
