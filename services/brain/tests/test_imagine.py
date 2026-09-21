@@ -57,3 +57,12 @@ def test_breadth_limits_the_replies_imagined():
     wide = Recorder()
     Imagination(wide, depth=3, breadth=10, extensions=0).choose_many([Position(mask(21, 22, 23), 0, mask(9, 10), 0)])
     assert len(judge.seen) < len(wide.seen)
+
+
+def test_roots_already_judged_are_not_judged_again():
+    boards = after_boards(HANGING)
+    judge = Recorder()
+    known = [material(b) for b in boards]
+    told = Imagination(judge, depth=1, extensions=4).scores(boards, known=known)
+    assert not set(boards) & set(judge.seen)
+    assert told == Imagination(Recorder(), depth=1, extensions=4).scores(boards)

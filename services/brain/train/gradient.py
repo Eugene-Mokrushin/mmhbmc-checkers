@@ -9,6 +9,7 @@ import torch
 import progress
 from connectome.coordinates import one_per_neuron, read_markers
 from connectome.load import load
+from game import gradfly
 from game.arena import play, tally
 from progress import Progress
 from sim.kernels import best_device
@@ -50,12 +51,24 @@ def main() -> None:
     parser.add_argument("--eval-games", type=int, default=50)
     parser.add_argument("--init", help="checkpoint to continue from")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--window", type=int, help="brain steps per board; 200 is a tenth of a second")
+    parser.add_argument("--carry", action="store_true", help="judge every board from a brain another board left busy")
+    parser.add_argument("--colour", action="store_true", help="R1-6 see that a piece is there, R7 and R8 whose it is")
+    parser.add_argument("--sweep", type=float, default=0.0, help="how far the board drifts across the eye, in squares")
+    parser.add_argument("--recalibrate", action="store_true", help="refit the readout after loading, for a changed window")
     args = parser.parse_args()
 
+    if args.window:
+        gradfly.WINDOW = args.window
+    gradfly.COLOUR, gradfly.SWEEP = args.colour, args.sweep
     progress.use(args.run)
     log, rng, lessons = Log(RUNS_DIR / args.run, vars(args)), np.random.default_rng(args.seed), Lessons(args.depth)
     student = Student(load(min_syn=5), one_per_neuron(read_markers()), best_device())
     start = student.load(args.init).get("step", 0) if args.init else 0
+    if args.recalibrate:
+        print(f"readout refitted for a {gradfly.WINDOW}-step window: correlation {student.calibrate(lessons, rng):.2f}", flush=True)
+    if args.carry:
+        student.carry = np.random.default_rng(args.seed + 7)
     if not args.init:
         print(f"readout fitted to the untrained brain: correlation {student.calibrate(lessons, rng):.2f}", flush=True)
         student.save(log.dir / "g-0000000.pt", step=0)

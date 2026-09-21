@@ -44,12 +44,15 @@ class Imagination(Player):
         super().__init__(seed)
         self.judge, self.depth, self.breadth, self.extensions = judge, depth, breadth, extensions
 
-    def scores(self, after: list[Position]) -> list[float]:
+    def scores(self, after: list[Position], known: list[float] | None = None) -> list[float]:
+        # known: the roots already judged, so a caller that has just watched the brain
+        # score them does not pay for a second pass
         roots = [Node(board, self.depth - 1, self.extensions) for board in after]
         parents, level = [], roots
         while level:
-            for node, score in zip(level, self.judge.scores([n.board for n in level])):
+            for node, score in zip(level, known if known is not None else self.judge.scores([n.board for n in level])):
                 node.score = score
+            known = None
             for parent in parents:
                 parent.kids = sorted(parent.kids, key=lambda n: n.score, reverse=True)[: self.breadth]
             kept = [kid for parent in parents for kid in parent.kids] if parents else roots

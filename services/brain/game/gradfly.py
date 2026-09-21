@@ -12,6 +12,11 @@ from sim.retina import field
 DT = 5e-4
 WINDOW = 200  # 100 ms in 0.5 ms steps
 CHUNK = 512
+KINDS = {"R1-6": 0, "R7": 1, "R8": 2}
+COLOUR = False  # R7 and R8 become two colour channels, one for each side
+SPLIT = False  # and R1-6 drop to bare occupancy, so only colour says whose piece it is
+SWEEP = 0.0  # how far the board drifts across the eye during the window, in squares
+SWEEPS = 4
 
 
 class Eyes:
@@ -19,11 +24,13 @@ class Eyes:
     def __init__(self, c: Connectome, points: pd.DataFrame, seed: int = 0):
         self.receptors, self.where = field(c, points)
         self.sides = c.side[self.receptors]
+        self.kinds = np.array([KINDS.get(t, 0) for t in c.cell_type[self.receptors]])
         self.projection = projection(self.receptors, c.n)
         self.phase = np.random.default_rng(seed).random(len(self.receptors))
 
     def inputs(self, positions) -> Rhythm:
-        return Rhythm(rates(positions, self.where, self.sides), WINDOW, DT, self.phase)
+        shifts = np.linspace(-SWEEP, SWEEP, SWEEPS) if SWEEP else (0.0,)
+        return Rhythm(rates(positions, self.where, self.sides, self.kinds if COLOUR else None, shifts, SPLIT), WINDOW, DT, self.phase)
 
 
 def descending(c: Connectome) -> np.ndarray:

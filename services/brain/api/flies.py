@@ -15,7 +15,7 @@ from train.freeze import FLIES_DIR, load_fly
 from train.skills import exam
 
 BREADTH = 2
-TYPICAL = 400
+TYPICAL = 600
 
 
 @dataclass
@@ -32,7 +32,9 @@ class Stabled:
     watcher: Watcher | None = field(default=None)
 
     def thinking(self, depth: int) -> Player:
-        return self.player if depth <= 1 else Imagination(self.centred, depth=depth, breadth=BREADTH, seed=depth)
+        # even at one move the fly finishes a forced exchange before it judges, and a move
+        # that leaves the other side with no reply is simply a win
+        return Imagination(self.centred, depth=max(depth, 1), breadth=BREADTH, seed=depth)
 
     def watching(self, boards):
         # the simulation as it happens, a frame at a time
@@ -88,7 +90,8 @@ class Stable:
         return move, score, frames[pick]
 
     def pick(self, fly: Stabled, moves: list[Move], after: list[Position], counts, depth: int) -> tuple[Move, float, int]:
-        scores = fly.player.read(counts if isinstance(counts, np.ndarray) else counts.numpy()) if depth <= 1 else np.asarray(fly.thinking(depth).scores(after))
+        raw = np.asarray(fly.player.read(counts if isinstance(counts, np.ndarray) else counts.numpy()), dtype=float)
+        scores = np.asarray(fly.thinking(depth).scores(after, known=list((raw - fly.centred.mean) / fly.centred.spread)))
         chosen = int(np.argmax(scores))
         return moves[chosen], float(scores[chosen]), chosen
 

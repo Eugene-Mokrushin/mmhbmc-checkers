@@ -14,19 +14,30 @@ from train.lessons import SCALE, Lessons, loss
 class Student:
     # the whole brain being trained, with the readout that turns descending-neuron
     # spikes into a score
-    def __init__(self, c: Connectome, points: pd.DataFrame, device: str):
+    def __init__(self, c: Connectome, points: pd.DataFrame, device: str, readout: np.ndarray | None = None):
         self.c, self.points, self.device = c, points, device
         self.eyes = Eyes(c, points)
-        self.brain = GradLIF(c.weights(), self.eyes.projection, descending(c), LIF(dt=DT, input_gain=1.0), device)
+        where = descending(c) if readout is None else readout
+        self.brain = GradLIF(c.weights(), self.eyes.projection, where, LIF(dt=DT, input_gain=1.0), device)
         self.head = torch.nn.Linear(len(self.brain.readout), 1).to(device)
         self.mean = torch.zeros(len(self.brain.readout), device=device)
         self.spread = torch.ones(len(self.brain.readout), device=device)
+        self.carry = None  # an rng here means it never judges a board from a brain at rest
 
     def parameters(self) -> list[torch.Tensor]:
         return [self.brain.gain, *self.head.parameters()]
 
-    def scores(self, boards) -> torch.Tensor:
-        return self.head((self.brain(self.eyes.inputs(boards)) - self.mean) / self.spread).squeeze(1)
+    def scores(self, boards, state=None) -> torch.Tensor:
+        if state is None and self.carry is not None:
+            state = self.busy(boards)
+        counts = self.brain.run(self.eyes.inputs(boards), state)[0]
+        return self.head((counts - self.mean) / self.spread).squeeze(1)
+
+    @torch.no_grad()
+    def busy(self, boards):
+        # the state another board leaves the brain in, so it judges with a head still full
+        other = [boards[i] for i in self.carry.permutation(len(boards))]
+        return self.brain.run(self.eyes.inputs(other))[1]
 
     @torch.no_grad()
     def calibrate(self, lessons: Lessons, rng: np.random.Generator, positions: int = 1000) -> float:
