@@ -24,7 +24,8 @@ class Player:
             start += len(moves)
         return picks
 
-    def choose_many(self, positions: list[Position]) -> list[Move]:
+    def choose_many(self, positions: list[Position], keys: list[int] | None = None) -> list[Move]:
+        # keys say which game each position belongs to, for a player that remembers one
         options, after = candidates(positions)
         flat = [m for moves in options for m in moves]
         return [flat[i] for i in self.pick(options, self.scores(after))]

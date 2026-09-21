@@ -38,7 +38,7 @@ def step(games: list[Game], player: Player) -> None:
     mine = [g for g in games if not g.over and g.to_move is player]
     if not mine:
         return
-    for g, move in zip(mine, player.choose_many([g.pos for g in mine])):
+    for g, move in zip(mine, player.choose_many([g.pos for g in mine], [id(g) for g in mine])):
         if move not in legal_moves(g.pos):
             raise RuntimeError(f"illegal move {move} after {len(g.moves)} plies")
         g.moves.append(move)
